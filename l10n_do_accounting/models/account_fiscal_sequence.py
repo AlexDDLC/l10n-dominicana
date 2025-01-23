@@ -33,66 +33,73 @@ class AccountFiscalSequence(models.Model):
         string="Authorization number",
         required=True,
         readonly=True,
-        states={"draft": [("readonly", False)]},
         tracking=True,
     )
+
     expiration_date = fields.Date(
         required=True,
         readonly=True,
-        states={"draft": [("readonly", False)]},
         tracking=True,
         default=datetime.strptime(
             str(int(str(fields.Date.today())[0:4]) + 1) + "-12-31", "%Y-%m-%d"
         ).date(),
     )
+
     fiscal_type_id = fields.Many2one(
         string='Fiscal type',
         comodel_name="account.fiscal.type",
         required=True,
         readonly=True,
-        states={"draft": [("readonly", False)]},
         tracking=True,
     )
+
     type = fields.Selection(
         related="fiscal_type_id.type",
         store=True,
     )
+
     sequence_start = fields.Integer(
         required=True,
         readonly=True,
-        states={"draft": [("readonly", False)]},
         tracking=True,
         default=1,
         copy=False,
     )
+
     sequence_end = fields.Integer(
         required=True,
         readonly=True,
-        states={"draft": [("readonly", False)]},
         tracking=True,
         default=1,
         copy=False,
     )
+
     sequence_remaining = fields.Integer(
         string="Remaining",
         compute="_compute_sequence_remaining",
     )
+
     sequence_id = fields.Many2one(
         "ir.sequence", string="Internal Sequence", copy=False,
     )
+
     warning_gap = fields.Integer(compute="_compute_warning_gap",)
+
     remaining_percentage = fields.Float(
         default=35,
         required=True,
         help="Fiscal Sequence remaining percentage to reach to start "
         "warning notifications.",
     )
+
     number_next_actual = fields.Integer(
         string="Next Number",
         help="Next number of this sequence",
         related="sequence_id.number_next_actual",
     )
+
     next_fiscal_number = fields.Char(compute="_compute_next_fiscal_number",)
+
     state = fields.Selection(
         [
             ("draft", "Draft"),
@@ -106,12 +113,13 @@ class AccountFiscalSequence(models.Model):
         tracking=True,
         copy=False,
     )
+
     can_be_queue = fields.Boolean(compute="_compute_can_be_queue",)
+
     company_id = fields.Many2one(
         "res.company",
         default=lambda self: self.env.user.company_id,
         readonly=True,
-        states={"draft": [("readonly", False)]},
         tracking=True,
     )
 
@@ -137,15 +145,12 @@ class AccountFiscalSequence(models.Model):
     @api.depends("remaining_percentage")
     def _compute_warning_gap(self):
         for rec in self:
-            rec.warning_gap = (rec.sequence_end - (rec.sequence_start - 1)) * (
-                rec.remaining_percentage / 100
-            )
+            rec.warning_gap = (rec.sequence_end - (rec.sequence_start - 1)) * (rec.remaining_percentage / 100)
 
     @api.depends("sequence_end", "sequence_id.number_next")
     def _compute_sequence_remaining(self):
         for rec in self:
-            rec.sequence_remaining = \
-                (rec.sequence_end - rec.sequence_id.number_next_actual + 1) if rec.sequence_id else 0
+            rec.sequence_remaining = (rec.sequence_end - rec.sequence_id.number_next_actual + 1) if rec.sequence_id else 0
 
     @api.depends("fiscal_type_id.prefix", "sequence_id.padding", "sequence_id.number_next_actual")
     def _compute_next_fiscal_number(self):
@@ -223,9 +228,7 @@ class AccountFiscalSequence(models.Model):
     def name_get(self):
         result = []
         for sequence in self:
-            result.append(
-                (sequence.id, "%s - %s" % (sequence.name, sequence.fiscal_type_id.name))
-            )
+            result.append((sequence.id, "%s - %s" % (sequence.name, sequence.fiscal_type_id.name)))
         return result
 
     def action_view_sequence(self):
@@ -372,22 +375,27 @@ class AccountFiscalType(models.Model):
         required=True, 
         copy=False,
     )
+
     active = fields.Boolean(
         string="Active",
         default=True
     )
+
     sequence = fields.Integer(
         string="Sequence",
         default=10,
     )
+
     prefix = fields.Char(
         string="Prefix",
         copy=False,
     )
+
     padding = fields.Integer(
         string="Padding",
         default=8,
     )
+
     type = fields.Selection(
         string="Type",
         selection=[
@@ -401,6 +409,7 @@ class AccountFiscalType(models.Model):
         required=True,
         default="in_invoice",
     )
+
     journal_type = fields.Selection(
         string="Journal Type",
         selection=[
@@ -409,19 +418,23 @@ class AccountFiscalType(models.Model):
         ], 
         compute="_compute_journal_type"
     )
+
     fiscal_position_id = fields.Many2one(
         comodel_name="account.fiscal.position",
         string="Fiscal Position"
     )
+
     journal_id = fields.Many2one(
         comodel_name="account.journal", 
         string="Journal"
     )
+
     assigned_sequence = fields.Boolean(
         string="Assigned Sequence",
         help="If checked, this Fiscal Type will use a Fiscal Sequence to generate Fiscal Numbers.",
         default=True,
     )
+
     requires_document = fields.Boolean(
         string="Requires a document?",
         help="If checked, this Fiscal Type will require a document to be generated.",
@@ -468,7 +481,6 @@ class AccountFiscalType(models.Model):
             )
 
         origin_out_padding = len(fiscal_number) - len(fiscal_type.prefix) if fiscal_type.prefix else len(fiscal_number)
-        
 
         if origin_out_padding != fiscal_type.padding:
             raise ValidationError(

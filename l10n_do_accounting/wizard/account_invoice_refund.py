@@ -20,8 +20,6 @@ class AccountMoveReversal(models.TransientModel):
         res = super(AccountMoveReversal, self).default_get(fields)
         context = dict(self._context or {})
         invoice_ids = self.env["account.move"].browse(context.get("active_ids"))
-        test = set(invoice_ids.mapped("is_l10n_do_fiscal_invoice"))
-        test = set(invoice_ids.mapped("move_type"))
         res.update({
             'is_fiscal_refund': set(invoice_ids.mapped("is_l10n_do_fiscal_invoice")) == {True},
             'is_vendor_refund': set(invoice_ids.mapped("move_type")) == {'in_invoice'}
@@ -45,28 +43,31 @@ class AccountMoveReversal(models.TransientModel):
     refund_method = fields.Selection(
         selection=_get_refund_method_selection,
         default="refund",
-        string='Credit Method', 
+        string='Credit Method',
         required=True,
         help='Choose how you want to credit this invoice. You cannot "modify" nor "cancel" if the invoice is already reconciled.'
     )
+
     is_vendor_refund = fields.Boolean(
         string='Vendor refund',
     )
+
     refund_ref = fields.Char(
         string='NCF'
     )
+
     ncf_expiration_date = fields.Date(
         string="Valid until",
     )
+
     is_fiscal_refund = fields.Boolean(
         string='Fiscal refund'
     )
-    
+
     def compute_refund(self, mode="refund"):
         xml_id = False
         created_inv = []
         for wizard in self:
-
             inv_obj = self.env["account.move"]
             context = dict(self._context or {})
             for inv in inv_obj.browse(context.get("active_ids")):
@@ -179,23 +180,20 @@ class AccountMoveReversal(models.TransientModel):
     #         result["domain"] = invoice_domain
     #         return result
     #     return True
-    
-    def reverse_moves(self):
+
+    def reverse_moves(self, is_modify=False):
         self.ensure_one()
 
         if self.refund_ref and self.is_fiscal_refund:
-            
             self.env['account.fiscal.type'].check_format_fiscal_number(
                 self.refund_ref,
                 'in_refund'
             )
+        return super(AccountMoveReversal, self).reverse_moves(is_modify=is_modify)
 
-        return super(AccountMoveReversal, self).reverse_moves()
-    
     def _prepare_default_reversal(self, move):
-        
         res = super(AccountMoveReversal, self)._prepare_default_reversal(move)
-        
+
         if self.is_fiscal_refund:
             res.update({
                 'ref': self.refund_ref,
@@ -205,5 +203,5 @@ class AccountMoveReversal(models.TransientModel):
                 'ncf_expiration_date': self.ncf_expiration_date,
                 'fiscal_type_id': False
             })
-        
+
         return res

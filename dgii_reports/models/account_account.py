@@ -55,6 +55,7 @@ class AccountAccount(models.Model):
         ],
         required=False,
     )
+
     box_it1 = fields.Selection(
         string='IT-1',
         selection=[
@@ -83,14 +84,10 @@ class AccountAccount(models.Model):
             ('I40', 'I40 - SERVICES SUBJECT TO WITHHOLDING NON-PROFIT ENTITIES (Rule No. 01-11)'),
             ('I42', 'I42 - SERVICES SUBJECT TO COMPANY WITHHOLDING (Rule No. 07-09)'),
             ('I43', 'I43 - SERVICES SUBJECT TO COMPANY WITHHOLDING (Rule No. 02-05 AND 07-07)'),
-            ('I44', 'I44 - GOODS OR SERVICES SUBJECT TO WITHHOLDING TO TAXPAYERS UNDER THE RST (Rule No. 01-11) '
-                    '(Operations Taxed at 18%)'),
-            ('I45', 'I45 - GOODS OR SERVICES SUBJECT TO WITHHOLDING TO TAXPAYERS UNDER THE RST (Rule No. 01-11) '
-                    '(Operations Taxed at 16%)'),
-            ('I47', 'I47 - ASSETS SUBJECT TO RETENTION OF PROOF OF PURCHASE (Operations Taxed at 18%) '
-                    '(Rule No. 08-10 and 05-19)'),
-            ('I48', 'I48 - ASSETS SUBJECT TO RETENTION OF PROOF OF PURCHASE (Operations Taxed at 16%) '
-                    '(Rule No. 08-10 and 05-19)'),
+            ('I44', 'I44 - GOODS OR SERVICES SUBJECT TO WITHHOLDING TO TAXPAYERS UNDER THE RST (Rule No. 01-11) (Operations Taxed at 18%)'),
+            ('I45', 'I45 - GOODS OR SERVICES SUBJECT TO WITHHOLDING TO TAXPAYERS UNDER THE RST (Rule No. 01-11) (Operations Taxed at 16%)'),
+            ('I47', 'I47 - ASSETS SUBJECT TO RETENTION OF PROOF OF PURCHASE (Operations Taxed at 18%) (Rule No. 08-10 and 05-19)'),
+            ('I48', 'I48 - ASSETS SUBJECT TO RETENTION OF PROOF OF PURCHASE (Operations Taxed at 16%) (Rule No. 08-10 and 05-19)'),
             ('I59', 'I59 - TOTAL ITBIS RECEIVED FOR SALE'),
             ('I61', 'I61 - COMPUTABLE PAYMENTS ON ACCOUNT'),
 

@@ -35,11 +35,13 @@ class AccountInvoice(models.Model):
         comodel_name="account.fiscal.type",
         index=True,
     )
+
     available_fiscal_type_ids = fields.Many2many(
         string="Available Fiscal Type",
         comodel_name="account.fiscal.type",
         compute='_compute_available_fiscal_type'
     )
+
     fiscal_sequence_id = fields.Many2one(
         comodel_name="account.fiscal.sequence",
         string="Fiscal Sequence",
@@ -47,6 +49,7 @@ class AccountInvoice(models.Model):
         compute="_compute_fiscal_sequence",
         store=True,
     )
+
     income_type = fields.Selection(
         string="Income Type",
         selection=[
@@ -60,6 +63,7 @@ class AccountInvoice(models.Model):
         copy=False,
         default=lambda self: self._context.get("income_type", "01"),
     )
+
     expense_type = fields.Selection(
         copy=False,
         selection=[
@@ -77,6 +81,7 @@ class AccountInvoice(models.Model):
         ],
         string="Cost & Expense Type",
     )
+
     annulation_type = fields.Selection(
         string="Annulment Type",
         selection=[
@@ -93,24 +98,30 @@ class AccountInvoice(models.Model):
         ],
         copy=False,
     )
+
     origin_out = fields.Char(
         string="Affects",
         copy=False,
+        help="NCF number that Invoice that was affected by credit note."
     )
+
     ncf_expiration_date = fields.Date(
         string="Valid until",
         store=True,
         copy=False,
         required=False
     )
+
     is_l10n_do_fiscal_invoice = fields.Boolean(
         string="Is Fiscal Invoice",
         compute="_compute_is_l10n_do_fiscal_invoice",
         store=True,
     )
+
     assigned_sequence = fields.Boolean(
         related="fiscal_type_id.assigned_sequence",
     )
+
     fiscal_sequence_status = fields.Selection(
         selection=[
             ("no_fiscal", "No fiscal"),
@@ -120,6 +131,7 @@ class AccountInvoice(models.Model):
         ],
         compute="_compute_fiscal_sequence_status",
     )
+
     is_debit_note = fields.Boolean(
         string="Is debit note"
     )
@@ -489,11 +501,7 @@ class AccountInvoice(models.Model):
         res = super(AccountInvoice, self)._post(soft)
 
         for inv in self:
-            if inv.is_l10n_do_fiscal_invoice \
-                    and not inv.ref \
-                    and inv.fiscal_type_id.assigned_sequence \
-                    and inv.is_invoice()\
-                    and inv.state == "posted":
+            if inv.is_l10n_do_fiscal_invoice and not inv.ref and inv.fiscal_type_id.assigned_sequence and inv.is_invoice() and inv.state == "posted":
                 inv.write({
                     'ref': inv.fiscal_sequence_id.get_fiscal_number(),
                     'ncf_expiration_date': inv.fiscal_sequence_id.expiration_date
@@ -519,19 +527,13 @@ class AccountInvoice(models.Model):
                 
 
     def button_cancel(self, force_cancel=False):
-
         if self.journal_id.l10n_do_fiscal_journal and force_cancel == False:
-
             return self.action_invoice_cancel()
         else:
             return super(AccountInvoice, self).button_cancel()
 
-        
-        
-
     @api.returns("self")
     def refund(self, invoice_date=None, date=None, description=None, journal_id=None):
-
         context = dict(self._context or {})
         refund_type = context.get("refund_type")
         amount = context.get("amount")
@@ -548,9 +550,7 @@ class AccountInvoice(models.Model):
         new_invoices = self.browse()
         for invoice in self:
             # create the new invoice
-            values = self.with_context(
-                refund_type=refund_type, amount=amount, account=account
-            )._prepare_refund(
+            values = self.with_context(refund_type=refund_type, amount=amount, account=account)._prepare_refund(
                 invoice,
                 invoice_date=invoice_date,
                 date=date,

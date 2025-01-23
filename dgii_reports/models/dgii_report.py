@@ -5,10 +5,11 @@
 
 import calendar
 import base64
+import os
 from datetime import datetime as dt, timedelta
 
 from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, UserError
 
 try:
     import pycountry
@@ -27,25 +28,28 @@ class DgiiReport(models.Model):
     
     def _compute_previous_report_pending(self):
         for report in self:
-            previous = self.search([('company_id', '=', report.company_id.id),
-                                    ('state', 'in', ('draft', 'generated')),
-                                    ('id', '!=', self.id)],
-                                   order='create_date asc',
-                                   limit=1)
+            previous = self.search(
+                [
+                    ('company_id', '=', report.company_id.id),
+                    ('state', 'in', ('draft', 'generated')),
+                    ('id', '!=', self.id)
+                ],
+                order='create_date asc',
+                limit=1
+            )
             if previous:
-                previous_date = dt.strptime('01/' + previous.name,
-                                            '%d/%m/%Y').date()
-                current_date = dt.strptime('01/' + self.name,
-                                           '%d/%m/%Y').date()
-                report.previous_report_pending = True if previous_date < \
-                    current_date else False
+                previous_date = dt.strptime('01/' + previous.name,'%d/%m/%Y').date()
+                current_date = dt.strptime('01/' + self.name,'%d/%m/%Y').date()
+                report.previous_report_pending = True if previous_date < current_date else False
             else:
                 report.previous_report_pending = False
 
     name = fields.Char(
         string='Period', 
-        required=True, size=7
+        required=True, 
+        size=7
     )
+
     state = fields.Selection(
         string="state",
         selection=[
@@ -57,30 +61,36 @@ class DgiiReport(models.Model):
         default='draft',
         copy=False
     )
+
     previous_balance = fields.Float(
         string='Previous balance', 
         copy=False
     )
+
     currency_id = fields.Many2one(
         comodel_name='res.currency',
         string='Currency',
         required=True,
         related='company_id.currency_id',
     )
+
     company_id = fields.Many2one(
         comodel_name='res.company',
         string='Company',
         default=lambda self: self.env.company,
         required=True
     )
+
     previous_report_pending = fields.Boolean(
         compute='_compute_previous_report_pending'
     )
+
     start_date = fields.Date(
         compute='_compute_dates', 
         string='Start Date',
         store=True
     )
+
     end_date = fields.Date(
         compute='_compute_dates', 
         string='End Date',
@@ -92,15 +102,31 @@ class DgiiReport(models.Model):
         for report in self:
             start_date = False
             end_date = False
-            
-            if report.name:
-                month, year = report.name.split('/')
-                last_day = calendar.monthrange(int(year), int(month))[1]
-                start_date = '{}-{}-01'.format(year, month)
-                end_date = '{}-{}-{}'.format(year, month, last_day)
 
-            report.start_date = start_date
-            report.end_date = end_date
+            try:
+                if report.name:
+                    if '/' in report.name and len(report.name.split('/')[0]) == 2 and len(report.name.split('/')[1]) == 4:
+                        month, year = report.name.split('/')
+                        if month.isdigit() and year.isdigit():
+                            month = int(month)
+                            year = int(year)
+                            if 1 <= month <= 12:
+                                last_day = calendar.monthrange(int(year), int(month))[1]
+                                start_date = '{}-{}-01'.format(year, month)
+                                end_date = '{}-{}-{}'.format(year, month, last_day)
+                            else:
+                                raise UserError(_('The month must be between 01 and 12'))
+                        else:
+                            raise UserError(_('The month and year must be numeric.'))
+                    else:
+                        raise UserError(_(
+                            """The period format (%s) is not valid. the correct format is MM/YYYY (Month/Year)"""
+                        ) % (report.name))
+
+                report.start_date = start_date
+                report.end_date = end_date
+            except UserError as e:
+                raise e
 
     _sql_constraints = [
         ('name_unique', 'UNIQUE(name, company_id)', 
@@ -124,9 +150,9 @@ class DgiiReport(models.Model):
                 'purchase_other_taxes': 0,
                 'purchase_legal_tip': 0
             }
-            purchase_line_ids = self.env['dgii.reports.purchase.line'].search([
-                ('dgii_report_id', '=', rec.id)
-            ])
+
+            purchase_line_ids = self.env['dgii.reports.purchase.line'].search([('dgii_report_id', '=', rec.id)])
+
             for inv in purchase_line_ids:
                 data['purchase_records'] += 1
                 data['service_total_amount'] += inv.service_total_amount
@@ -167,9 +193,9 @@ class DgiiReport(models.Model):
                 'sale_other_taxes': 0,
                 'sale_legal_tip': 0
             }
-            sale_line_ids = self.env['dgii.reports.sale.line'].search([
-                ('dgii_report_id', '=', rec.id)
-            ])
+
+            sale_line_ids = self.env['dgii.reports.sale.line'].search([('dgii_report_id', '=', rec.id)])
+
             for inv in sale_line_ids:
                 data['sale_records'] += 1
                 data['sale_invoiced_amount'] += inv.invoiced_amount
@@ -192,9 +218,7 @@ class DgiiReport(models.Model):
     
     def _compute_608_fields(self):
         for rec in self:
-            cancel_line_ids = self.env['dgii.reports.cancel.line'].search([
-                ('dgii_report_id', '=', rec.id)
-            ])
+            cancel_line_ids = self.env['dgii.reports.cancel.line'].search([('dgii_report_id', '=', rec.id)])
             rec.cancel_records = len(cancel_line_ids)
 
     
@@ -206,9 +230,9 @@ class DgiiReport(models.Model):
                 'exterior_withholded_isr': 0,
                 'exterior_invoiced_amount': 0
             }
-            external_line_ids = self.env['dgii.reports.exterior.line'].search([
-                ('dgii_report_id', '=', rec.id)
-            ])
+
+            external_line_ids = self.env['dgii.reports.exterior.line'].search([('dgii_report_id', '=', rec.id)])
+
             for inv in external_line_ids:
                 data['exterior_records'] += 1
                 data['presumed_income'] += inv.presumed_income
@@ -218,8 +242,7 @@ class DgiiReport(models.Model):
             rec.exterior_records = abs(data['exterior_records'])
             rec.presumed_income = abs(data['presumed_income'])
             rec.exterior_withholded_isr = abs(data['exterior_withholded_isr'])
-            rec.exterior_invoiced_amount = abs(
-                data['exterior_invoiced_amount'])
+            rec.exterior_invoiced_amount = abs(data['exterior_invoiced_amount'])
 
     # 606
     purchase_records = fields.Integer(compute='_compute_606_fields')
@@ -269,30 +292,35 @@ class DgiiReport(models.Model):
         inverse_name='dgii_report_id',
         domain=[('section', '=', '1')]
     )
+
     it1_section_2_line_ids = fields.One2many(
         string='IT1 section 2 lines',
         comodel_name='dgii.reports.it1.line',
         inverse_name='dgii_report_id',
         domain=[('section', '=', '2')]
     )
+
     it1_section_3_line_ids = fields.One2many(
         string='IT1 section 3 lines',
         comodel_name='dgii.reports.it1.line',
         inverse_name='dgii_report_id',
         domain=[('section', '=', '3')]
     )
+
     it1_section_4_line_ids = fields.One2many(
         string='IT1 section 4 lines',
         comodel_name='dgii.reports.it1.line',
         inverse_name='dgii_report_id',
         domain=[('section', '=', '4')]
     )
+    
     it1_section_5_line_ids = fields.One2many(
         string='IT1 section 5 lines',
         comodel_name='dgii.reports.it1.line',
         inverse_name='dgii_report_id',
         domain=[('section', '=', '5')]
     )
+
     it1_section_6_line_ids = fields.One2many(
         string='IT1  section 6 lines',
         comodel_name='dgii.reports.it1.line',
@@ -305,22 +333,27 @@ class DgiiReport(models.Model):
         string='Issued Consumer NCF Qty', 
         copy=False
     )
+
     csmr_ncf_total_amount = fields.Monetary(
         string='Invoiced Amount Total',
         copy=False
     )
+
     csmr_ncf_total_itbis = fields.Monetary(
         string='Invoiced ITBIS Total', 
         copy=False,
     )
+
     csmr_ncf_total_isc = fields.Monetary(
         string='Selective Tax', 
         copy=False
     )
+
     csmr_ncf_total_other = fields.Monetary(
         string='Other Taxes Total', 
         copy=False
     )
+
     csmr_ncf_total_lgl_tip = fields.Monetary(
         string='Legal Tip Total', 
         copy=False
@@ -331,26 +364,32 @@ class DgiiReport(models.Model):
         string='Consumer Cash', 
         copy=False
     )
+
     csmr_bank = fields.Monetary(
         string='Consumer Check / Transfer / Deposit',
         copy=False
     )
+
     csmr_card = fields.Monetary(
         string='Consumer Credit Card / Debit Card',
         copy=False
     )
+
     csmr_credit = fields.Monetary(
         string='Consumer Credit', 
         copy=False
     )
+
     csmr_bond = fields.Monetary(
         string='Consumer Gift certificates or vouchers', 
         copy=False
     )
+
     csmr_swap = fields.Monetary(
         string='Consumer Swap', 
         copy=False
     )
+
     csmr_others = fields.Monetary(
         string='ConsumerOther Sale Forms', 
         copy=False
@@ -385,8 +424,7 @@ class DgiiReport(models.Model):
         if not partner_id.country_id:
             return False
         try:
-            country = pycountry.countries.get(
-                alpha_2=partner_id.country_id.code)
+            country = pycountry.countries.get(alpha_2=partner_id.country_id.code)
             res = country.numeric
         except AttributeError:
             return res
@@ -406,21 +444,20 @@ class DgiiReport(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        
         for vals in vals_list:
             self._validate_date_format(vals.get('name'))
-
         return super(DgiiReport, self).create(vals_list)
 
     
     def write(self, vals):
         self._validate_date_format(vals.get('name'))
-
         return super(DgiiReport, self).write(vals)
+
 
     @staticmethod
     def get_date_tuple(date):
         return date.year, date.month
+
 
     def _get_pending_invoices(self, types, states):
         period = dt.strptime(self.name, '%m/%Y')
@@ -435,6 +472,7 @@ class DgiiReport(models.Model):
         ]).filtered(lambda inv: self.get_date_tuple(inv.payment_date if inv.payment_date else inv.invoice_date) == (period.year, period.month))
 
         return invoice_ids
+
 
     def _get_invoices(self, states, types):
         """
@@ -459,54 +497,49 @@ class DgiiReport(models.Model):
 
         return invoice_ids
 
+
     def formatted_rnc_cedula(self, vat):
         if vat:
             if len(vat) in [9, 11]:
                 id_type = 1 if len(vat) == 9 else 2
-                return (vat.strip().replace('-', ''),
-                        id_type) if not vat.isspace() else False
+                return (vat.strip().replace('-', ''), id_type) if not vat.isspace() else False
             else:
                 return False
         else:
             return False
 
-    def _get_formatted_date(self, date):
 
-        return dt.strptime(date, '%Y-%m-%d').strftime('%Y%m%d') \
-            if isinstance(date, str) else date.strftime('%Y%m%d') \
-            if date else ""
+    def _get_formatted_date(self, date):
+        return dt.strptime(date, '%Y-%m-%d').strftime('%Y%m%d') if isinstance(date, str) else date.strftime('%Y%m%d') if date else ""
+
 
     def _get_formatted_amount(self, amount):
-
         return str('{:.2f}'.format(abs(amount))).ljust(12)
 
     def process_606_report_data(self, values):
-
-        RNC = str(values['rnc_cedula'] if values['rnc_cedula'] else "").strip()
-        ID_TYPE = str(values['identification_type'] if values['identification_type'] else "").strip()
-        EXP_TYPE = str(
-            values['expense_type'] if values['expense_type'] else "").strip()
-        NCF = str(values['fiscal_invoice_number']).strip()
-        NCM = str(values['modified_invoice_number'] if values['modified_invoice_number'] else "").strip()
-        INV_DATE = str(self._get_formatted_date( values['invoice_date'])).strip()
-        PAY_DATE = str(self._get_formatted_date(values['payment_date'])).strip()
-        SERV_AMOUNT = self._get_formatted_amount(values['service_total_amount']).strip()
-        GOOD_AMOUNT = self._get_formatted_amount(values['good_total_amount']).strip()
-        INV_AMOUNT = self._get_formatted_amount(values['invoiced_amount']).strip()
-        INV_ITBIS = self._get_formatted_amount(values['invoiced_itbis']).strip()
-        WH_ITBIS = self._get_formatted_amount(values['withholded_itbis']).strip()
-        PROP_ITBIS = self._get_formatted_amount(values['proportionality_tax']).strip()
-        COST_ITBIS = self._get_formatted_amount(values['cost_itbis']).strip()
-        ADV_ITBIS = self._get_formatted_amount(values['advance_itbis']).strip()
-        PP_ITBIS = ''
-        WH_TYPE = str(values['isr_withholding_type'] if values['isr_withholding_type'] else "").strip()
-        INC_WH = self._get_formatted_amount(values['income_withholding']).strip()
-        PP_ISR = ''
-        ISC = self._get_formatted_amount(values['selective_tax']).strip()
-        OTHR = self._get_formatted_amount(values['other_taxes']).strip()
-        LEG_TIP = self._get_formatted_amount(values['legal_tip']).strip()
-        PAY_FORM = str(
-            values['payment_type'] if values['payment_type'] else "").strip()
+        RNC = str(values['rnc_cedula'] if values['rnc_cedula'] else "").strip() #1
+        ID_TYPE = str(values['identification_type'] if values['identification_type'] else "").strip() #2
+        EXP_TYPE = str(values['expense_type'] if values['expense_type'] else "").strip() #3
+        NCF = str(values['fiscal_invoice_number']).strip() #4
+        NCM = str(values['modified_invoice_number'] if values['modified_invoice_number'] else "").strip() #5
+        INV_DATE = str(self._get_formatted_date( values['invoice_date'])).strip() #6
+        PAY_DATE = str(self._get_formatted_date(values['payment_date'])).strip() #7
+        SERV_AMOUNT = self._get_formatted_amount(values['service_total_amount']).strip() #8
+        GOOD_AMOUNT = self._get_formatted_amount(values['good_total_amount']).strip() #9
+        INV_AMOUNT = self._get_formatted_amount(values['invoiced_amount']).strip() #10
+        INV_ITBIS = self._get_formatted_amount(values['invoiced_itbis']).strip() #11
+        WH_ITBIS = self._get_formatted_amount(values['withholded_itbis']).strip() #12
+        PROP_ITBIS = self._get_formatted_amount(values['proportionality_tax']).strip() #13
+        COST_ITBIS = self._get_formatted_amount(values['cost_itbis']).strip() #14
+        ADV_ITBIS = self._get_formatted_amount(values['advance_itbis']).strip() #15
+        PP_ITBIS = '' #16
+        WH_TYPE = str(values['isr_withholding_type'] if values['isr_withholding_type'] else "").strip() #17
+        INC_WH = self._get_formatted_amount(values['income_withholding']).strip() #18
+        PP_ISR = '' #18
+        ISC = self._get_formatted_amount(values['selective_tax']).strip() #20
+        OTHR = self._get_formatted_amount(values['other_taxes']).strip() #21
+        LEG_TIP = self._get_formatted_amount(values['legal_tip']).strip() #22
+        PAY_FORM = str(values['payment_type'] if values['payment_type'] else "").strip() #23
 
         return "|".join([
             RNC, ID_TYPE, EXP_TYPE, NCF, NCM, INV_DATE, PAY_DATE, SERV_AMOUNT,
@@ -514,24 +547,32 @@ class DgiiReport(models.Model):
             COST_ITBIS, ADV_ITBIS, PP_ITBIS, WH_TYPE, INC_WH, PP_ISR, ISC,
             OTHR, LEG_TIP, PAY_FORM
         ])
+        
 
     def _generate_606_txt(self, records, qty):
-
         company_vat = self.company_id.vat
         period = dt.strptime(self.name.replace('/', ''), '%m%Y').strftime('%Y%m')
 
-        header = "606|{}|{}|{}".format(
-            str(company_vat), period, qty) + '\n'
-        data = header + records
+        header = "606|{}|{}|{}".format(company_vat, period, qty)
+        data = header + '\n' + records
 
-        file_path = '/tmp/DGII_606_{}_{}.txt'.format(company_vat, period)
-        with open(file_path, 'w', encoding="utf-8", newline='\r\n') as txt_606:
-            txt_606.write(str(data))
+        file_directory = '/tmp'
+        file_name = 'DGII_606_{}_{}.txt'.format(company_vat, period)
+        file_path = os.path.join(file_directory, file_name)
+
+        os.makedirs(file_directory, exist_ok=True)
+
+        with open(file_path, 'w', encoding='utf-8', newline='\r\n') as txt_606:
+            txt_606.write(data)
+
+        with open(file_path, 'rb') as file:
+            encoded_file = base64.b64encode(file.read())
 
         self.write({
-            'purchase_filename': file_path.replace('/tmp/', ''),
-            'purchase_binary': base64.b64encode(open(file_path, 'rb').read())
+            'purchase_filename': file_name,
+            'purchase_binary': encoded_file
         })
+        
 
     def _include_in_current_report(self, invoice):
         """
@@ -566,28 +607,20 @@ class DgiiReport(models.Model):
             line = 0
             report_data = ''
             for inv in invoice_ids:
-                inv.fiscal_status = 'blocked' if not inv.fiscal_status else \
-                    inv.fiscal_status
+                inv.fiscal_status = 'blocked' if not inv.fiscal_status else inv.fiscal_status
                 line += 1
-                rnc_ced = self.formatted_rnc_cedula(
-                    inv.partner_id.vat
-                ) if inv.fiscal_type_id.prefix != 'B17' else \
-                    self.formatted_rnc_cedula(
-                    inv.company_id.vat)
+                rnc_ced = self.formatted_rnc_cedula(inv.partner_id.vat) if inv.fiscal_type_id.prefix != 'B17' else self.formatted_rnc_cedula(inv.company_id.vat)
                 show_payment_date = self._include_in_current_report(inv)
                 values = {
                     'dgii_report_id': rec.id,
                     'line': line,
                     'rnc_cedula': rnc_ced[0] if rnc_ced else False,
                     'identification_type': rnc_ced[1] if rnc_ced else False,
-                    'expense_type': inv.expense_type
-                    if inv.expense_type else False,
+                    'expense_type': inv.expense_type if inv.expense_type else False,
                     'fiscal_invoice_number': inv.ref,
-                    'modified_invoice_number': inv.origin_out if
-                    inv.move_type == 'in_refund' else False,
+                    'modified_invoice_number': inv.origin_out if inv.move_type == 'in_refund' else False,
                     'invoice_date': inv.invoice_date,
-                    'payment_date': inv.payment_date if
-                    show_payment_date else False,
+                    'payment_date': inv.payment_date if show_payment_date else False,
                     'service_total_amount': inv.service_total_amount,
                     'good_total_amount': inv.good_total_amount,
                     'invoiced_amount': abs(inv.amount_untaxed_signed),
@@ -598,10 +631,8 @@ class DgiiReport(models.Model):
                     'purchase_perceived_itbis': 0,  # Falta computar en la fact
                     'purchase_perceived_isr': 0,  # Falta computarlo en la fact
                     'isr_withholding_type': inv.isr_withholding_type,
-                    'withholded_itbis': inv.withholding_itbis if
-                    show_payment_date else 0,
-                    'income_withholding': inv.income_withholding if
-                    show_payment_date else 0,
+                    'withholded_itbis': inv.withholding_itbis if show_payment_date else 0,
+                    'income_withholding': inv.income_withholding if show_payment_date else 0,
                     'selective_tax': inv.selective_tax,
                     'other_taxes': inv.other_taxes,
                     'legal_tip': inv.legal_tip,
@@ -614,6 +645,7 @@ class DgiiReport(models.Model):
                 report_data += self.process_606_report_data(values) + '\n'
             self._generate_606_txt(report_data, line)
 
+
     def _get_payments_dict(self):
         return {
             'cash': 0,
@@ -625,13 +657,14 @@ class DgiiReport(models.Model):
             'others': 0
         }
 
+
     def _convert_to_user_currency(self, base_currency, amount, date):
         context = dict(self._context or {})
         user_currency_id = self.env.user.company_id.currency_id
         base_currency_id = base_currency
         ctx = context.copy()
-        return base_currency_id.with_context(ctx)._convert(
-            amount, user_currency_id, self.company_id, date)
+        return base_currency_id.with_context(ctx)._convert(amount, user_currency_id, self.company_id, date)
+
 
     @staticmethod
     def include_payment(invoice_id, payment_id):
@@ -640,8 +673,8 @@ class DgiiReport(models.Model):
         p_date = payment_id.date
         i_date = invoice_id.invoice_date
 
-        return True if (p_date.year <= i_date.year) and (
-            p_date.month <= i_date.month) else False
+        return True if (p_date.year <= i_date.year) and (p_date.month <= i_date.month) else False
+
 
     def _get_sale_payments_forms(self, invoice_id):
         payments_dict = self._get_payments_dict()
@@ -666,22 +699,21 @@ class DgiiReport(models.Model):
                                 invoice_id.invoice_date,
                             )
                 else:
-                    payments_dict['swap'] += self._convert_to_user_currency(
-                        invoice_id.currency_id, payment['amount'], invoice_id.invoice_date)
-            payments_dict['credit'] += self._convert_to_user_currency(
-                invoice_id.currency_id, invoice_id.amount_residual, invoice_id.invoice_date)
+                    payments_dict['swap'] += self._convert_to_user_currency(invoice_id.currency_id, payment['amount'], invoice_id.invoice_date)
+            
+            payments_dict['credit'] += self._convert_to_user_currency(invoice_id.currency_id, invoice_id.amount_residual, invoice_id.invoice_date)
         else:
             for payment in invoice_id._get_invoice_payment_widget():
-                payments_dict['swap'] += self._convert_to_user_currency(
-                    invoice_id.currency_id, payment['amount'], invoice_id.invoice_date)
+                payments_dict['swap'] += self._convert_to_user_currency(invoice_id.currency_id, payment['amount'], invoice_id.invoice_date)
 
-            payments_dict['credit'] += self._convert_to_user_currency(
-                invoice_id.currency_id, invoice_id.amount_residual, invoice_id.invoice_date)
+            payments_dict['credit'] += self._convert_to_user_currency(invoice_id.currency_id, invoice_id.amount_residual, invoice_id.invoice_date)
 
         return payments_dict
 
+
     def _get_income_type_dict(self):
         return {'01': 0, '02': 0, '03': 0, '04': 0, '05': 0, '06': 0}
+
 
     def _process_income_dict(self, args, invoice):
         income_dict = args
@@ -690,30 +722,29 @@ class DgiiReport(models.Model):
         return income_dict
 
     def process_607_report_data(self, values):
-
-        RNC = str(values['rnc_cedula'] if values['rnc_cedula'] else "").strip()
-        ID_TYPE = str(values['identification_type'] if values['identification_type'] else "").strip()
-        NCF = str(values['fiscal_invoice_number']).strip()
-        NCM = str(values['modified_invoice_number'] if values['modified_invoice_number'] else "").strip()
-        INCOME_TYPE = str(values['income_type']).strip()
-        INV_DATE = str(self._get_formatted_date(values['invoice_date'])).strip()
-        WH_DATE = str(self._get_formatted_date(values['withholding_date'])).strip()
-        INV_AMOUNT = self._get_formatted_amount(values['invoiced_amount']).strip()
-        INV_ITBIS = self._get_formatted_amount(values['invoiced_itbis']).strip()
-        WH_ITBIS = self._get_formatted_amount(values['third_withheld_itbis']).strip()
-        PRC_ITBIS = ''
-        WH_ISR = self._get_formatted_amount(values['third_income_withholding']).strip()
-        PCR_ISR = ''
-        ISC = self._get_formatted_amount(values['selective_tax']).strip()
-        OTH_TAX = self._get_formatted_amount(values['other_taxes']).strip()
-        LEG_TIP = self._get_formatted_amount(values['legal_tip']).strip()
-        CASH = self._get_formatted_amount(values['cash']).strip()
-        BANK = self._get_formatted_amount(values['bank']).strip()
-        CARD = self._get_formatted_amount(values['card']).strip()
-        CRED = self._get_formatted_amount(values['credit']).strip()
-        SWAP = self._get_formatted_amount(values['swap']).strip()
-        BOND = self._get_formatted_amount(values['bond']).strip()
-        OTHR = self._get_formatted_amount(values['others']).strip()
+        RNC = str(values['rnc_cedula'] if values['rnc_cedula'] else "").strip() #1
+        ID_TYPE = str(values['identification_type'] if values['identification_type'] else "").strip() #2
+        NCF = str(values['fiscal_invoice_number']).strip() #3
+        NCM = str(values['modified_invoice_number'] if values['modified_invoice_number'] else "").strip() #4
+        INCOME_TYPE = str(values['income_type']).strip() #5
+        INV_DATE = str(self._get_formatted_date(values['invoice_date'])).strip() #6
+        WH_DATE = str(self._get_formatted_date(values['withholding_date'])).strip() #7
+        INV_AMOUNT = self._get_formatted_amount(values['invoiced_amount']).strip() #8
+        INV_ITBIS = self._get_formatted_amount(values['invoiced_itbis']).strip() #9
+        WH_ITBIS = self._get_formatted_amount(values['third_withheld_itbis']).strip() #10
+        PRC_ITBIS = '' #11
+        WH_ISR = self._get_formatted_amount(values['third_income_withholding']).strip() #12
+        PCR_ISR = '' #13
+        ISC = self._get_formatted_amount(values['selective_tax']).strip() #14
+        OTH_TAX = self._get_formatted_amount(values['other_taxes']).strip() #15
+        LEG_TIP = self._get_formatted_amount(values['legal_tip']).strip() #16
+        CASH = self._get_formatted_amount(values['cash']).strip() #17
+        BANK = self._get_formatted_amount(values['bank']).strip() #18
+        CARD = self._get_formatted_amount(values['card']).strip() #19
+        CRED = self._get_formatted_amount(values['credit']).strip() #20
+        SWAP = self._get_formatted_amount(values['swap']).strip() #21
+        BOND = self._get_formatted_amount(values['bond']).strip() #22
+        OTHR = self._get_formatted_amount(values['others']).strip() #23
 
         return "|".join([
             RNC, ID_TYPE, NCF, NCM, INCOME_TYPE, INV_DATE, WH_DATE, INV_AMOUNT,
@@ -722,23 +753,29 @@ class DgiiReport(models.Model):
         ])
 
     def _generate_607_txt(self, records, qty):
-
         company_vat = self.company_id.vat
-        period = \
-            dt.strptime(self.name.replace('/', ''), '%m%Y').strftime('%Y%m')
+        period = dt.strptime(self.name.replace('/', ''), '%m%Y').strftime('%Y%m')
 
-        header = "607|{}|{}|{}".format(
-            str(company_vat), period, qty) + '\n'
-        data = header + records
+        header = "607|{}|{}|{}".format(company_vat, period, qty)
+        data = header + '\n' + records
 
-        file_path = '/tmp/DGII_607_{}_{}.txt'.format(company_vat, period)
-        with open(file_path, 'w', encoding="utf-8", newline='\r\n') as txt_607:
-            txt_607.write(str(data))
+        file_directory = '/tmp'
+        file_name = 'DGII_607_{}_{}.txt'.format(company_vat, period)
+        file_path = os.path.join(file_directory, file_name)
+
+        os.makedirs(file_directory, exist_ok=True)
+
+        with open(file_path, 'w', encoding='utf-8', newline='\r\n') as txt_607:
+            txt_607.write(data)
+
+        with open(file_path, 'rb') as file:
+            encoded_file = base64.b64encode(file.read())
 
         self.write({
-            'sale_filename': file_path.replace('/tmp/', ''),
-            'sale_binary': base64.b64encode(open(file_path, 'rb').read())
+            'sale_filename': file_name,
+            'sale_binary': encoded_file
         })
+
 
     def _compute_607_data(self):
         for rec in self:
@@ -759,12 +796,8 @@ class DgiiReport(models.Model):
             report_data = ''
             for inv in invoice_ids:
                 income_dict = self._process_income_dict(income_dict, inv)
-                inv.fiscal_status = \
-                    'blocked' if not inv.fiscal_status else inv.fiscal_status
-                rnc_ced = self.formatted_rnc_cedula(
-                    inv.partner_id.vat
-                ) if inv.fiscal_type_id.prefix != 'B12' \
-                    else self.formatted_rnc_cedula(inv.company_id.vat)
+                inv.fiscal_status = 'blocked' if not inv.fiscal_status else inv.fiscal_status
+                rnc_ced = self.formatted_rnc_cedula(inv.partner_id.vat) if inv.fiscal_type_id.prefix != 'B12' else self.formatted_rnc_cedula(inv.company_id.vat)
                 show_payment_date = self._include_in_current_report(inv)
                 payments = self._get_sale_payments_forms(inv)
                 values = {
@@ -773,22 +806,15 @@ class DgiiReport(models.Model):
                     'rnc_cedula': rnc_ced[0] if rnc_ced else False,
                     'identification_type': rnc_ced[1] if rnc_ced else False,
                     'fiscal_invoice_number': inv.ref,
-                    'modified_invoice_number':
-                        inv.origin_out if inv.origin_out and
-                        inv.origin_out[-10:-8] in ['01', '02', '14', '15'] else
-                        False,
+                    'modified_invoice_number': inv.origin_out if inv.origin_out and inv.origin_out[-10:-8] in ['01', '02', '14', '15'] else False,
                     'income_type': inv.income_type,
                     'invoice_date': inv.invoice_date,
-                    'withholding_date': inv.payment_date if (
-                        inv.move_type != 'out_refund' and
-                        show_payment_date) else False,
+                    'withholding_date': inv.payment_date if (inv.move_type != 'out_refund' and show_payment_date) else False,
                     'invoiced_amount': abs(inv.amount_untaxed_signed),
                     'invoiced_itbis': inv.invoiced_itbis,
-                    'third_withheld_itbis': inv.withholding_itbis
-                        if show_payment_date else 0,
+                    'third_withheld_itbis': inv.withholding_itbis if show_payment_date else 0,
                     'perceived_itbis': 0,  # Pendiente
-                    'third_income_withholding': inv.income_withholding
-                        if show_payment_date else 0,
+                    'third_income_withholding': inv.income_withholding if show_payment_date else 0,
                     'perceived_isr': 0,  # Pendiente
                     'selective_tax': inv.selective_tax,
                     'other_taxes': inv.other_taxes,
@@ -796,28 +822,19 @@ class DgiiReport(models.Model):
                     'invoice_partner_id': inv.partner_id.id,
                     'invoice_id': inv.id,
                     'credit_note': True if inv.move_type == 'out_refund' else False,
-                    'cash': payments.get('cash') * -1 if
-                        inv.move_type == 'out_refund' else payments.get('cash'),
-                    'bank': payments.get('bank') * -1 if
-                        inv.move_type == 'out_refund' else payments.get('bank'),
-                    'card': payments.get('card') * -1 if
-                        inv.move_type == 'out_refund' else payments.get('card'),
-                    'credit': payments.get('credit') * -1 if
-                        inv.move_type == 'out_refund' else payments.get('credit'),
-                    'swap': payments.get('swap') * -1 if
-                        inv.move_type == 'out_refund' else payments.get('swap'),
-                    'bond': payments.get('bond') * -1 if
-                        inv.move_type == 'out_refund' else payments.get('bond'),
-                    'others': payments.get('others') * -1 if
-                    inv.move_type == 'out_refund' else payments.get('others')
+                    'cash': payments.get('cash') * -1 if inv.move_type == 'out_refund' else payments.get('cash'),
+                    'bank': payments.get('bank') * -1 if inv.move_type == 'out_refund' else payments.get('bank'),
+                    'card': payments.get('card') * -1 if inv.move_type == 'out_refund' else payments.get('card'),
+                    'credit': payments.get('credit') * -1 if inv.move_type == 'out_refund' else payments.get('credit'),
+                    'swap': payments.get('swap') * -1 if inv.move_type == 'out_refund' else payments.get('swap'),
+                    'bond': payments.get('bond') * -1 if inv.move_type == 'out_refund' else payments.get('bond'),
+                    'others': payments.get('others') * -1 if inv.move_type == 'out_refund' else payments.get('others')
                 }
 
                 if str(values['fiscal_invoice_number'])[-10:-8] == '02':
                     csmr_dict['csmr_ncf_qty'] += 1
-                    csmr_dict['csmr_ncf_total_amount'] += \
-                        values['invoiced_amount']
-                    csmr_dict['csmr_ncf_total_itbis'] += \
-                        values['invoiced_itbis']
+                    csmr_dict['csmr_ncf_total_amount'] += values['invoiced_amount']
+                    csmr_dict['csmr_ncf_total_itbis'] += values['invoiced_itbis']
                     csmr_dict['csmr_ncf_total_isc'] += values['selective_tax']
                     csmr_dict['csmr_ncf_total_other'] += values['other_taxes']
                     csmr_dict['csmr_ncf_total_lgl_tip'] += values['legal_tip']
@@ -832,8 +849,7 @@ class DgiiReport(models.Model):
                 line += 1
                 values.update({'line': line})
                 SaleLine.create(values)
-                if str(values.get('fiscal_invoice_number'))[-10:-8] == \
-                        '02' and abs(inv.amount_untaxed_signed) < 250000:
+                if str(values.get('fiscal_invoice_number'))[-10:-8] == '02' and abs(inv.amount_untaxed_signed) < 250000:
                     excluded_line += 1
                     # Excluye las facturas de Consumo
                     # con monto menor a 250000 solo del txt
@@ -842,37 +858,42 @@ class DgiiReport(models.Model):
                     report_data += self.process_607_report_data(values) + '\n'
 
                 for k in payment_dict:
-                    payment_dict[k] += payments[k] * -1 if inv.move_type == \
-                        'out_refund' else payments[k]
+                    payment_dict[k] += payments[k] * -1 if inv.move_type == 'out_refund' else payments[k]
             
             self._set_csmr_fields_vals(csmr_dict)
             self._generate_607_txt(report_data, line - excluded_line)
+            
 
     def process_608_report_data(self, values):
-
         NCF = str(values['fiscal_invoice_number']).ljust(11)
-        INV_DATE = str(self._get_formatted_date(
-            values['invoice_date'])).ljust(8)
+        INV_DATE = str(self._get_formatted_date(values['invoice_date'])).ljust(8)
         ANU_TYPE = str(values['annulation_type']).ljust(2)
 
         return "|".join([NCF, INV_DATE, ANU_TYPE])
+    
 
     def _generate_608_txt(self, records, qty):
-
         company_vat = self.company_id.vat
         period = dt.strptime(self.name.replace('/', ''), '%m%Y').strftime('%Y%m')
 
-        header = "608|{}|{}|{}".format(
-            str(company_vat).ljust(11), period, qty) + '\n'
-        data = header + records
+        header = "608|{}|{}|{}".format(company_vat.ljust(11), period, qty)
+        data = header + '\n' + records
 
-        file_path = '/tmp/DGII_608_{}_{}.txt'.format(company_vat, period)
-        with open(file_path, 'w', encoding="utf-8", newline='\r\n') as txt_608:
-            txt_608.write(str(data))
+        file_directory = '/tmp'
+        file_name = 'DGII_608_{}_{}.txt'.format(company_vat, period)
+        file_path = os.path.join(file_directory, file_name)
+
+        os.makedirs(file_directory, exist_ok=True)
+
+        with open(file_path, 'w', encoding='utf-8', newline='\r\n') as txt_608:
+            txt_608.write(data)
+
+        with open(file_path, 'rb') as file:
+            encoded_file = base64.b64encode(file.read())
 
         self.write({
-            'cancel_filename': file_path.replace('/tmp/', ''),
-            'cancel_binary': base64.b64encode(open(file_path, 'rb').read())
+            'cancel_filename': file_name,
+            'cancel_binary': encoded_file
         })
 
     
@@ -907,24 +928,17 @@ class DgiiReport(models.Model):
             self._generate_608_txt(report_data, line)
 
     def process_609_report_data(self, values):
-
         LEGAL_NAME = str(values['legal_name']).ljust(50)
         ID_TYPE = str(values['tax_id_type'] if values['tax_id_type'] else "")
         TAX_ID = str(values['tax_id'] if values['tax_id'] else "").ljust(50)
-        CNT_CODE = str(
-            values['country_code'] if values['country_code'] else "").ljust(3)
-        PST = str(values['purchased_service_type']
-                  if values['purchased_service_type'] else "").ljust(2)
-        STD = str(values['service_type_detail']
-                  if values['service_type_detail'] else "").ljust(2)
-        REL_PART = str(
-            values['related_part'] if values['related_part'] else "0").ljust(1)
-        DOC_NUM = str(
-            values['doc_number'] if values['doc_number'] else "").ljust(30)
+        CNT_CODE = str(values['country_code'] if values['country_code'] else "").ljust(3)
+        PST = str(values['purchased_service_type']if values['purchased_service_type'] else "").ljust(2)
+        STD = str(values['service_type_detail'] if values['service_type_detail'] else "").ljust(2)
+        REL_PART = str(values['related_part'] if values['related_part'] else "0").ljust(1)
+        DOC_NUM = str(values['doc_number'] if values['doc_number'] else "").ljust(30)
         DOC_DATE = str(self._get_formatted_date(values['doc_date'])).ljust(8)
         INV_AMOUNT = self._get_formatted_amount(values['invoiced_amount'])
-        ISR_DATE = str(self._get_formatted_date(
-            values['isr_withholding_date'])).ljust(8)
+        ISR_DATE = str(self._get_formatted_date(values['isr_withholding_date'])).ljust(8)
         PRM_INCM = self._get_formatted_amount(values['presumed_income'])
         WH_ISR = self._get_formatted_amount(values['withholded_isr'])
 
@@ -933,23 +947,29 @@ class DgiiReport(models.Model):
             DOC_DATE, INV_AMOUNT, ISR_DATE, PRM_INCM, WH_ISR
         ])
 
+
     def _generate_609_txt(self, records, qty):
-
         company_vat = self.company_id.vat
-        period = dt.strptime(self.name.replace('/', ''),
-                             '%m%Y').strftime('%Y%m')
+        period = dt.strptime(self.name.replace('/', ''), '%m%Y').strftime('%Y%m')
 
-        header = "609|{}|{}|{}".format(
-            str(company_vat).ljust(11), period, qty) + '\n'
-        data = header + records
+        header = "609|{}|{}|{}".format(company_vat.ljust(11), period, qty)
+        data = header + '\n' + records
 
-        file_path = '/tmp/DGII_609_{}_{}.txt'.format(company_vat, period)
-        with open(file_path, 'w', encoding="utf-8", newline='\r\n') as txt_609:
-            txt_609.write(str(data))
+        file_directory = '/tmp'
+        file_name = 'DGII_609_{}_{}.txt'.format(company_vat, period)
+        file_path = os.path.join(file_directory, file_name)
+
+        os.makedirs(file_directory, exist_ok=True)
+
+        with open(file_path, 'w', encoding='utf-8', newline='\r\n') as txt_609:
+            txt_609.write(data)
+
+        with open(file_path, 'rb') as file:
+            encoded_file = base64.b64encode(file.read())
 
         self.write({
-            'exterior_filename': file_path.replace('/tmp/', ''),
-            'exterior_binary': base64.b64encode(open(file_path, 'rb').read())
+            'exterior_filename': file_name,
+            'exterior_binary': encoded_file
         })
 
     
@@ -961,13 +981,11 @@ class DgiiReport(models.Model):
             invoice_ids = self._get_invoices(
                 ['posted'], 
                 ['in_invoice', 'in_refund']
-            ).filtered(lambda inv: (inv.partner_id.country_id.code != 'DO') and \
-                                    (inv.fiscal_type_id.prefix == 'B17'))
+            ).filtered(lambda inv: (inv.partner_id.country_id.code != 'DO') and (inv.fiscal_type_id.prefix == 'B17'))
             line = 0
             report_data = ''
             for inv in invoice_ids:
-                inv.fiscal_status = 'blocked' if not inv.fiscal_status else \
-                    inv.fiscal_status
+                inv.fiscal_status = 'blocked' if not inv.fiscal_status else inv.fiscal_status
                 line += 1
                 values = {
                     'dgii_report_id': rec.id,
@@ -1050,13 +1068,11 @@ class DgiiReport(models.Model):
             35: _('ADMINISTRATION AGREEMENT (Art. 4 Paragraph I, Norm 07-07)'),
             36: _('CONSULTING / FEES'),
             37: _('TOTAL CONSTRUCTION OPERATIONS (Total Invoiced: Sum boxes 34+35, Amount: Sum boxes 34+35+36)'),
-            38: _('OPERATIONS NOT SUBJECT TO ITBIS FOR CONSTRUCTION SERVICES '
-                  '(Subtract Box 37 Total Invoiced - Amount Subject to ITBIS)'),
+            38: _('OPERATIONS NOT SUBJECT TO ITBIS FOR CONSTRUCTION SERVICES (Subtract Box 37 Total Invoiced - Amount Subject to ITBIS)'),
             39: _('SALES OF GOODS BY COMMISSION'),
             40: _('SALES OF SERVICES ON BEHALF OF THIRD PARTIES'),
             41: _('TOTAL COMMISSION OPERATIONS (Sum boxes 39+40)'),
-            42: _('OPERATIONS NOT SUBJECT TO ITBIS FOR COMMISSIONS '
-                  '(Subtract Box 41 Total Invoiced - Amount Subject to ITBIS)'),
+            42: _('OPERATIONS NOT SUBJECT TO ITBIS FOR COMMISSIONS (Subtract Box 41 Total Invoiced - Amount Subject to ITBIS)'),
             43: _('TOTAL CREDIT NOTES ISSUED WITH MORE THAN THIRTY'),
             44: _('TOTAL INVOICES IN TAX RECEIPTS FOR SPECIAL REGIMES'),
             45: _('IN OPERATIONS OF PRODUCERS OF EXEMPT GOODS OR SERVICES'),
@@ -1099,16 +1115,14 @@ class DgiiReport(models.Model):
                 'section': '1'
             },
             'AIII': {
-                'name': _('III. OPERATIONS REPORTED IN THE 607/SALES BOOK AND ELECTRONIC INVOICE (E-NCF) BY TYPE OF '
-                          'SALE (TOTAL AMOUNT INCLUDING TAXES)'),
+                'name': _('III. OPERATIONS REPORTED IN THE 607/SALES BOOK AND ELECTRONIC INVOICE (E-NCF) BY TYPE OF SALE (TOTAL AMOUNT INCLUDING TAXES)'),
                 'display_type': 'line_section',
                 'sequence': 12,
                 'dgii_report_id': self.id,
                 'section': '2'
             },
             'AIV': {
-                'name': _('IV. OPERATIONS REPORTED IN THE 607/SALES BOOK AND ELECTRONIC INVOICE (E-NCF) BY TYPE OF '
-                          'INCOME'),
+                'name': _('IV. OPERATIONS REPORTED IN THE 607/SALES BOOK AND ELECTRONIC INVOICE (E-NCF) BY TYPE OF INCOME'),
                 'display_type': 'line_section',
                 'sequence': 20,
                 'dgii_report_id': self.id,
@@ -1210,8 +1224,7 @@ class DgiiReport(models.Model):
             31: _('OTHER COMPUTABLE PAYMENTS ON ACCOUNT'),
             32: _('AUTHORIZED COMPENSATIONS AND/OR REFUNDS'),
             33: _('DIFFERENCE TO PAY (If the value of boxes 26-28-29-30-31-32 is Positive)'),
-            34: _('NEW BALANCE IN FAVOR '
-                  '(If the value of boxes (26-28-29-30-31-32 is Negative) or (27+28+29+30+31+32))'),
+            34: _('NEW BALANCE IN FAVOR (If the value of boxes (26-28-29-30-31-32 is Negative) or (27+28+29+30+31+32))'),
             35: _('SURCHARGES'),
             36: _('COMPENSATION INTEREST'),
             37: _('SANCTIONS'),
@@ -1224,10 +1237,8 @@ class DgiiReport(models.Model):
             44: _('GOODS OR SERVICES SUBJECT TO WITHHOLDING TO TAXPAYERS UNDER THE RST (Operations Taxed at 18%)'),
             45: _('GOODS OR SERVICES SUBJECT TO WITHHOLDING TO TAXPAYERS UNDER THE RST (Operations Taxed at 16%)'),
             46: _('TOTAL GOODS OR SERVICES SUBJECT TO WITHHOLDING TO TAXPAYERS UNDER THE RST (Sum of boxes 44+45)'),
-            47: _('ASSETS SUBJECT TO RETENTION OF PROOF OF PURCHASE '
-                  '(Operations Taxed at 18%) (Rule No. 08-10 and 05-19)'),
-            48: _('ASSETS SUBJECT TO RETENTION OF PROOF OF PURCHASE '
-                  '(Operations Taxed at 16%) (Rule No. 08-10 and 05-19)'),
+            47: _('ASSETS SUBJECT TO RETENTION OF PROOF OF PURCHASE (Operations Taxed at 18%) (Rule No. 08-10 and 05-19)'),
+            48: _('ASSETS SUBJECT TO RETENTION OF PROOF OF PURCHASE (Operations Taxed at 16%) (Rule No. 08-10 and 05-19)'),
             49: _('TOTAL ASSETS SUBJECT TO RETENTION PROOF OF PURCHASE'),
             50: _('ITBIS FOR SERVICES SUBJECT TO WITHHOLDING INDIVIDUALS AND NON-PROFIT ENTITIES'),
             51: _('ITBIS FOR SERVICES SUBJECT TO COMPANY WITHHOLDING (18% of box 42)'),
@@ -1235,10 +1246,8 @@ class DgiiReport(models.Model):
             53: _('ITBIS WITHHOLDED FROM TAXPAYERS UNDER THE RST (18% of box 44)'),
             54: _('ITBIS WITHHOLDED FROM TAXPAYERS UNDER THE RST (16% of box 45)'),
             55: _('TOTAL ITBIS WITHHOLDED FROM TAXPAYERS UNDER THE RST (Sum of boxes 53+54)'),
-            56: _('ITBIS FOR GOODS SUBJECT TO RETENTION OF PROOF OF PURCHASE (18% of box 47) '
-                  '(Rule No. 08-10 and 05-19)'),
-            57: _('ITBIS FOR GOODS SUBJECT TO RETENTION OF PROOF OF PURCHASE (16% of box 48) '
-                  '(Rule No. 08-10 and 05-19)'),
+            56: _('ITBIS FOR GOODS SUBJECT TO RETENTION OF PROOF OF PURCHASE (18% of box 47) (Rule No. 08-10 and 05-19)'),
+            57: _('ITBIS FOR GOODS SUBJECT TO RETENTION OF PROOF OF PURCHASE (16% of box 48) (Rule No. 08-10 and 05-19)'),
             58: _('TOTAL FOR ASSETS SUBJECT TO WITHHOLDING PROOF OF PURCHASE (Sum of boxes 56+57)'),
             59: _('TOTAL ITBIS RECEIVED FOR SALE'),
             60: _('TAX TO PAY (Sum of boxes 50+51+52+55+58+59)'),
@@ -1350,11 +1359,9 @@ class DgiiReport(models.Model):
 
     # IT1
     def _compute_attachment_a_and_it1_data(self):
-
         self.env['dgii.reports.it1.line'].search([('dgii_report_id', 'in', self.ids)]).unlink()
 
         for rec in self:
-
             attachment_a_lines = rec._get_attachment_a_dictionary()
             it1_lines = rec._get_it1_dictionary()
             sale_invoices = self.env['dgii.reports.sale.line'].search([('dgii_report_id', '=', rec.id)])
@@ -1388,6 +1395,7 @@ class DgiiReport(models.Model):
                 year -= 1
 
             datetime_month_before = rec.start_date.replace(month=month, year=year)
+
             previous_report = self.search([
                     ('company_id', '=', rec.company_id.id),
                     ('state', 'in', ('sent', 'generated')),
@@ -1401,28 +1409,19 @@ class DgiiReport(models.Model):
                 # AII                    
                 ncf_type = sale_invoice.invoice_id.fiscal_type_id.prefix
                 attachment_a_lines[box_ncf_type[ncf_type]]['quantity'] += 1
-                attachment_a_lines[box_ncf_type[ncf_type]]['amount'] += \
-                    sale_invoice.invoice_id.amount_untaxed_signed
+                attachment_a_lines[box_ncf_type[ncf_type]]['amount'] += sale_invoice.invoice_id.amount_untaxed_signed
 
                 # AIII
-                attachment_a_lines[12]['amount'] += sale_invoice.cash \
-                    if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.cash * -1
-                attachment_a_lines[13]['amount'] += sale_invoice.bank \
-                    if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.bank * -1
-                attachment_a_lines[14]['amount'] += sale_invoice.card \
-                    if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.card * -1
-                attachment_a_lines[15]['amount'] += sale_invoice.credit \
-                    if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.credit * -1
-                attachment_a_lines[16]['amount'] += sale_invoice.bond \
-                    if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.bond * -1
-                attachment_a_lines[17]['amount'] += sale_invoice.swap \
-                    if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.swap * -1
-                attachment_a_lines[18]['amount'] += sale_invoice.others \
-                    if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.others * -1
+                attachment_a_lines[12]['amount'] += sale_invoice.cash if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.cash * -1
+                attachment_a_lines[13]['amount'] += sale_invoice.bank if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.bank * -1
+                attachment_a_lines[14]['amount'] += sale_invoice.card if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.card * -1
+                attachment_a_lines[15]['amount'] += sale_invoice.credit if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.credit * -1
+                attachment_a_lines[16]['amount'] += sale_invoice.bond if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.bond * -1
+                attachment_a_lines[17]['amount'] += sale_invoice.swap if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.swap * -1
+                attachment_a_lines[18]['amount'] += sale_invoice.others if sale_invoice.invoice_id.move_type != 'out_refund' else sale_invoice.others * -1
 
                 # AIV
-                attachment_a_lines[box_income_type[sale_invoice.invoice_id.income_type]]['amount'] += \
-                    sale_invoice.invoiced_amount
+                attachment_a_lines[box_income_type[sale_invoice.invoice_id.income_type]]['amount'] += sale_invoice.invoiced_amount
 
                 # AVIII
                 if sale_invoice.invoice_id.move_type == 'out_refund':
@@ -1441,8 +1440,7 @@ class DgiiReport(models.Model):
                 for invoice_line in sale_invoice.invoice_id._get_tax_line_ids().filtered(
                         lambda tl: tl.tax_line_id.l10n_do_tax_type == 'itbis'):
 
-                    tax_base_amount = invoice_line.tax_base_amount \
-                        if sale_invoice.invoice_id.move_type != 'out_refund' else invoice_line.tax_base_amount * -1
+                    tax_base_amount = invoice_line.tax_base_amount if sale_invoice.invoice_id.move_type != 'out_refund' else invoice_line.tax_base_amount * -1
 
                     if invoice_line.tax_line_id.amount == 18.0:
                         it1_lines[11]['amount'] += tax_base_amount
@@ -1508,98 +1506,68 @@ class DgiiReport(models.Model):
             #  attachment_a_lines[40]['amount']
             # attachment_a_lines[35]['amount'] =
             attachment_a_lines[36]['amount'] = abs(sum(rec._get_move_lines_it1('A36').mapped('balance')))
-            attachment_a_lines[37]['local_purchase'] = attachment_a_lines[34]['local_purchase'] + \
-                                                       attachment_a_lines[35]['local_purchase']
-            attachment_a_lines[37]['amount'] = attachment_a_lines[34]['amount'] + \
-                                               attachment_a_lines[35]['amount'] + \
-                                               attachment_a_lines[36]['amount']
-            attachment_a_lines[38]['amount'] = attachment_a_lines[37]['local_purchase'] - \
-                                               attachment_a_lines[37]['amount']
+            attachment_a_lines[37]['local_purchase'] = attachment_a_lines[34]['local_purchase'] + attachment_a_lines[35]['local_purchase']
+            attachment_a_lines[37]['amount'] = attachment_a_lines[34]['amount'] + attachment_a_lines[35]['amount'] + attachment_a_lines[36]['amount']
+            attachment_a_lines[38]['amount'] = attachment_a_lines[37]['local_purchase'] - attachment_a_lines[37]['amount']
             # AVII
             attachment_a_lines[39]['local_purchase'] = abs(sum(rec._get_move_lines_it1('A39').mapped('balance')))
             # attachment_a_lines[39]['amount'] =
             attachment_a_lines[40]['local_purchase'] = abs(sum(rec._get_move_lines_it1('A40').mapped('balance')))
             # attachment_a_lines[40]['amount'] =
-            attachment_a_lines[41]['local_purchase'] = attachment_a_lines[39]['local_purchase'] + \
-                                                       attachment_a_lines[40]['local_purchase']
+            attachment_a_lines[41]['local_purchase'] = attachment_a_lines[39]['local_purchase'] + attachment_a_lines[40]['local_purchase']
             attachment_a_lines[41]['amount'] = attachment_a_lines[39]['amount'] + attachment_a_lines[40]['amount']
-            attachment_a_lines[42]['amount'] = attachment_a_lines[41]['local_purchase'] - \
-                                               attachment_a_lines[41]['amount']
+            attachment_a_lines[42]['amount'] = attachment_a_lines[41]['local_purchase'] - attachment_a_lines[41]['amount']
 
             # AIXa
             attachment_a_lines[45]['local_purchase'] = abs(sum(rec._get_move_lines_it1('A45c').mapped('balance')))
             attachment_a_lines[46]['local_purchase'] = abs(sum(rec._get_move_lines_it1('A46c').mapped('balance')))
             attachment_a_lines[47]['local_purchase'] = abs(sum(rec._get_move_lines_it1('A47c').mapped('balance')))
-            attachment_a_lines[48]['local_purchase'] = sum([
-                attachment_a_lines[box]['local_purchase'] for box in range(45, 48)])
+            attachment_a_lines[48]['local_purchase'] = sum([attachment_a_lines[box]['local_purchase'] for box in range(45, 48)])
 
             attachment_a_lines[45]['services'] = abs(sum(rec._get_move_lines_it1('A45s').mapped('balance')))
             attachment_a_lines[46]['services'] = abs(sum(rec._get_move_lines_it1('A46s').mapped('balance')))
             attachment_a_lines[47]['services'] = abs(sum(rec._get_move_lines_it1('A47s').mapped('balance')))
-            attachment_a_lines[48]['services'] = sum([
-                attachment_a_lines[box]['services'] for box in range(45, 48)])
+            attachment_a_lines[48]['services'] = sum([attachment_a_lines[box]['services'] for box in range(45, 48)])
 
             attachment_a_lines[45]['imports'] = abs(sum(rec._get_move_lines_it1('A45i').mapped('balance')))
             attachment_a_lines[46]['imports'] = abs(sum(rec._get_move_lines_it1('A46i').mapped('balance')))
             attachment_a_lines[47]['imports'] = abs(sum(rec._get_move_lines_it1('A47i').mapped('balance')))
-            attachment_a_lines[48]['imports'] = sum([
-                attachment_a_lines[box]['imports'] for box in range(45, 48)])
+            attachment_a_lines[48]['imports'] = sum([attachment_a_lines[box]['imports'] for box in range(45, 48)])
 
-            attachment_a_lines[45]['amount'] = attachment_a_lines[45]['local_purchase'] + \
-                                               attachment_a_lines[45]['services'] + \
-                                               attachment_a_lines[45]['imports']
+            attachment_a_lines[45]['amount'] = attachment_a_lines[45]['local_purchase'] + attachment_a_lines[45]['services'] + attachment_a_lines[45]['imports']
 
-            attachment_a_lines[46]['amount'] = attachment_a_lines[46]['local_purchase'] + \
-                                               attachment_a_lines[46]['services'] + \
-                                               attachment_a_lines[46]['imports']
+            attachment_a_lines[46]['amount'] = attachment_a_lines[46]['local_purchase'] + attachment_a_lines[46]['services'] + attachment_a_lines[46]['imports']
 
-            attachment_a_lines[47]['amount'] = attachment_a_lines[47]['local_purchase'] + \
-                                               attachment_a_lines[47]['services'] + \
-                                               attachment_a_lines[47]['imports']
+            attachment_a_lines[47]['amount'] = attachment_a_lines[47]['local_purchase'] + attachment_a_lines[47]['services'] + attachment_a_lines[47]['imports']
 
-            attachment_a_lines[48]['amount'] = attachment_a_lines[48]['local_purchase'] + \
-                                               attachment_a_lines[48]['services'] + \
-                                               attachment_a_lines[48]['imports']
+            attachment_a_lines[48]['amount'] = attachment_a_lines[48]['local_purchase'] + attachment_a_lines[48]['services'] + attachment_a_lines[48]['imports']
 
             # AIXb
             attachment_a_lines[49]['local_purchase'] = abs(sum(rec._get_move_lines_it1('A49c').mapped('balance')))
             attachment_a_lines[50]['local_purchase'] = abs(sum(rec._get_move_lines_it1('A50c').mapped('balance')))
             attachment_a_lines[51]['local_purchase'] = abs(sum(rec._get_move_lines_it1('A51c').mapped('balance')))
-            attachment_a_lines[52]['local_purchase'] = sum([
-                attachment_a_lines[box]['local_purchase'] for box in range(49, 53)])
+            attachment_a_lines[52]['local_purchase'] = sum([attachment_a_lines[box]['local_purchase'] for box in range(49, 53)])
 
             attachment_a_lines[49]['services'] = abs(sum(rec._get_move_lines_it1('A49s').mapped('balance')))
             attachment_a_lines[50]['services'] = abs(sum(rec._get_move_lines_it1('A50s').mapped('balance')))
             attachment_a_lines[51]['services'] = abs(sum(rec._get_move_lines_it1('A51s').mapped('balance')))
-            attachment_a_lines[52]['services'] = sum([
-                attachment_a_lines[box]['services'] for box in range(49, 53)])
+            attachment_a_lines[52]['services'] = sum([attachment_a_lines[box]['services'] for box in range(49, 53)])
 
             attachment_a_lines[49]['imports'] = abs(sum(rec._get_move_lines_it1('A49i').mapped('balance')))
             attachment_a_lines[50]['imports'] = abs(sum(rec._get_move_lines_it1('A50i').mapped('balance')))
             attachment_a_lines[51]['imports'] = abs(sum(rec._get_move_lines_it1('A51i').mapped('balance')))
-            attachment_a_lines[52]['imports'] = sum([
-                attachment_a_lines[box]['imports'] for box in range(49, 53)])
+            attachment_a_lines[52]['imports'] = sum([attachment_a_lines[box]['imports'] for box in range(49, 53)])
 
-            attachment_a_lines[49]['amount'] = attachment_a_lines[49]['local_purchase'] + \
-                                               attachment_a_lines[49]['services'] + \
-                                               attachment_a_lines[49]['imports']
+            attachment_a_lines[49]['amount'] = attachment_a_lines[49]['local_purchase'] + attachment_a_lines[49]['services'] + attachment_a_lines[49]['imports']
 
-            attachment_a_lines[50]['amount'] = attachment_a_lines[50]['local_purchase'] + \
-                                               attachment_a_lines[50]['services'] + \
-                                               attachment_a_lines[50]['imports']
+            attachment_a_lines[50]['amount'] = attachment_a_lines[50]['local_purchase'] + attachment_a_lines[50]['services'] + attachment_a_lines[50]['imports']
 
-            attachment_a_lines[51]['amount'] = attachment_a_lines[51]['local_purchase'] + \
-                                               attachment_a_lines[51]['services'] + \
-                                               attachment_a_lines[51]['imports']
+            attachment_a_lines[51]['amount'] = attachment_a_lines[51]['local_purchase'] + attachment_a_lines[51]['services'] + attachment_a_lines[51]['imports']
 
-            attachment_a_lines[52]['amount'] = attachment_a_lines[52]['local_purchase'] + \
-                                               attachment_a_lines[52]['services'] + \
-                                               attachment_a_lines[52]['imports']
+            attachment_a_lines[52]['amount'] = attachment_a_lines[52]['local_purchase'] + attachment_a_lines[52]['services'] + attachment_a_lines[52]['imports']
             # AIXc
             attachment_a_lines[53]['imports'] = abs(sum(rec._get_move_lines_it1('A53').mapped('balance')))
-            attachment_a_lines[53]['amount'] = attachment_a_lines[53]['local_purchase'] + \
-                                               attachment_a_lines[53]['services'] + \
-                                               attachment_a_lines[53]['imports']
+            attachment_a_lines[53]['amount'] = attachment_a_lines[53]['local_purchase'] + attachment_a_lines[53]['services'] + attachment_a_lines[53]['imports']
 
             # IT1II
             it1_lines[1]['amount'] = attachment_a_lines[11]['amount']
@@ -1618,21 +1586,14 @@ class DgiiReport(models.Model):
             it1_lines[10]['amount'] = it1_lines[1]['amount'] - it1_lines[9]['amount']
             it1_lines[15]['amount'] = abs(sum(rec._get_move_lines_it1('I15').mapped('balance')))
 
-            attachment_a_lines[54]['coefficient'] = (it1_lines[2]['amount'] +
-                                                     it1_lines[5]['amount'] +
-                                                     it1_lines[10]['amount']) / (it1_lines[1]['amount']) \
-                if it1_lines[1]['amount'] != 0 else 0
+            attachment_a_lines[54]['coefficient'] = (it1_lines[2]['amount'] + it1_lines[5]['amount'] + it1_lines[10]['amount']) / (it1_lines[1]['amount']) if it1_lines[1]['amount'] != 0 else 0
 
-            attachment_a_lines[55]['local_purchase'] = attachment_a_lines[53]['local_purchase'] * \
-                                                       attachment_a_lines[54]['coefficient']
-            attachment_a_lines[55]['services'] = attachment_a_lines[53]['services'] * \
-                                                 attachment_a_lines[54]['coefficient']
-            attachment_a_lines[55]['imports'] = attachment_a_lines[53]['imports'] * \
-                                                attachment_a_lines[54]['coefficient']
+            attachment_a_lines[55]['local_purchase'] = attachment_a_lines[53]['local_purchase'] * attachment_a_lines[54]['coefficient']
+            attachment_a_lines[55]['services'] = attachment_a_lines[53]['services'] * attachment_a_lines[54]['coefficient']
+            attachment_a_lines[55]['imports'] = attachment_a_lines[53]['imports'] * attachment_a_lines[54]['coefficient']
             attachment_a_lines[55]['amount'] = attachment_a_lines[53]['amount'] * attachment_a_lines[54]['coefficient']
 
-            attachment_a_lines[56]['local_purchase'] = attachment_a_lines[52]['local_purchase'] + \
-                                                       attachment_a_lines[55]['local_purchase']
+            attachment_a_lines[56]['local_purchase'] = attachment_a_lines[52]['local_purchase'] + attachment_a_lines[55]['local_purchase']
             attachment_a_lines[56]['services'] = attachment_a_lines[52]['services'] + attachment_a_lines[55]['services']
             attachment_a_lines[56]['imports'] = attachment_a_lines[52]['imports'] + attachment_a_lines[55]['imports']
             attachment_a_lines[56]['amount'] = attachment_a_lines[52]['amount'] + attachment_a_lines[55]['amount']
@@ -1648,10 +1609,8 @@ class DgiiReport(models.Model):
             it1_lines[23]['amount'] = attachment_a_lines[56]['services']
             it1_lines[24]['amount'] = attachment_a_lines[56]['imports']
             it1_lines[25]['amount'] = sum([it1_lines[box]['amount'] for box in range(22, 25)])
-            it1_lines[26]['amount'] = it1_lines[21]['amount'] - it1_lines[25]['amount'] \
-                if it1_lines[25]['amount'] < it1_lines[21]['amount'] else 0
-            it1_lines[27]['amount'] = abs(it1_lines[21]['amount'] - it1_lines[25]['amount']) \
-                if it1_lines[25]['amount'] > it1_lines[21]['amount'] else 0
+            it1_lines[26]['amount'] = it1_lines[21]['amount'] - it1_lines[25]['amount'] if it1_lines[25]['amount'] < it1_lines[21]['amount'] else 0
+            it1_lines[27]['amount'] = abs(it1_lines[21]['amount'] - it1_lines[25]['amount']) if it1_lines[25]['amount'] > it1_lines[21]['amount'] else 0
             it1_lines[28]['amount'] = abs(sum(rec._get_move_lines_it1('I28').mapped('balance')))
 
             previous_it1_line_34_obj = self.env['dgii.reports.it1.line'].search([
@@ -1665,16 +1624,10 @@ class DgiiReport(models.Model):
             it1_lines[31]['amount'] = abs(sum(rec._get_move_lines_it1('I31').mapped('balance')))
             it1_lines[32]['amount'] = abs(sum(rec._get_move_lines_it1('I32').mapped('balance')))
 
-            it1_line_33_34 = it1_lines[26]['amount'] - \
-                          it1_lines[28]['amount'] - \
-                          it1_lines[29]['amount'] - \
-                          it1_lines[30]['amount'] - \
-                          it1_lines[31]['amount'] - \
-                          it1_lines[32]['amount']
+            it1_line_33_34 = it1_lines[26]['amount'] - it1_lines[28]['amount'] - it1_lines[29]['amount'] - it1_lines[30]['amount'] - it1_lines[31]['amount'] - it1_lines[32]['amount']
 
             it1_lines[33]['amount'] = it1_line_33_34 if it1_line_33_34 > 0 else 0
-            it1_lines[34]['amount'] = it1_line_33_34 \
-                if it1_line_33_34 < 0 else sum([it1_lines[box]['amount'] for box in range(27, 33)])
+            it1_lines[34]['amount'] = it1_line_33_34 if it1_line_33_34 < 0 else sum([it1_lines[box]['amount'] for box in range(27, 33)])
 
             # IT1IV
             it1_lines[35]['amount'] = abs(sum(rec._get_move_lines_it1('I35').mapped('balance')))
@@ -1682,10 +1635,7 @@ class DgiiReport(models.Model):
             it1_lines[37]['amount'] = abs(sum(rec._get_move_lines_it1('I37').mapped('balance')))
 
             # IT1V
-            it1_lines[38]['amount'] = it1_lines[33]['amount'] + \
-                                      it1_lines[35]['amount'] + \
-                                      it1_lines[36]['amount'] + \
-                                      it1_lines[37]['amount']
+            it1_lines[38]['amount'] = it1_lines[33]['amount'] + it1_lines[35]['amount'] + it1_lines[36]['amount'] + it1_lines[37]['amount']
 
             # IT1A
             it1_lines[39]['amount'] = abs(sum(rec._get_move_lines_it1('I39').mapped('balance')))
@@ -1709,31 +1659,20 @@ class DgiiReport(models.Model):
             it1_lines[57]['amount'] = it1_lines[48]['amount'] * 0.16
             it1_lines[58]['amount'] = it1_lines[56]['amount'] + it1_lines[57]['amount']
             it1_lines[59]['amount'] = abs(sum(rec._get_move_lines_it1('I59').mapped('balance')))
-            it1_lines[60]['amount'] = it1_lines[50]['amount'] + \
-                                      it1_lines[51]['amount'] + \
-                                      it1_lines[52]['amount'] + \
-                                      it1_lines[55]['amount'] + \
-                                      it1_lines[58]['amount'] + \
-                                      it1_lines[59]['amount']
+            it1_lines[60]['amount'] = it1_lines[50]['amount'] + it1_lines[51]['amount'] + it1_lines[52]['amount'] + it1_lines[55]['amount'] + it1_lines[58]['amount'] + it1_lines[59]['amount']
             it1_lines[61]['amount'] = abs(sum(rec._get_move_lines_it1('I61').mapped('balance')))
-            it1_lines[62]['amount'] = abs(it1_lines[60]['amount'] - it1_lines[61]['amount']) \
-                if it1_lines[60]['amount'] > it1_lines[61]['amount'] else 0
-            it1_lines[63]['amount'] = abs(it1_lines[60]['amount'] - it1_lines[61]['amount']) \
-                if it1_lines[60]['amount'] < it1_lines[61]['amount'] else 0
+            it1_lines[62]['amount'] = abs(it1_lines[60]['amount'] - it1_lines[61]['amount']) if it1_lines[60]['amount'] > it1_lines[61]['amount'] else 0
+            it1_lines[63]['amount'] = abs(it1_lines[60]['amount'] - it1_lines[61]['amount']) if it1_lines[60]['amount'] < it1_lines[61]['amount'] else 0
             it1_lines[64]['amount'] = abs(sum(rec._get_move_lines_it1('I64').mapped('balance')))
             it1_lines[65]['amount'] = abs(sum(rec._get_move_lines_it1('I65').mapped('balance')))
             it1_lines[66]['amount'] = abs(sum(rec._get_move_lines_it1('I66').mapped('balance')))
-            it1_lines[67]['amount'] = it1_lines[62]['amount'] + \
-                                      it1_lines[64]['amount'] + \
-                                      it1_lines[65]['amount'] + \
-                                      it1_lines[66]['amount']
+            it1_lines[67]['amount'] = it1_lines[62]['amount'] + it1_lines[64]['amount'] + it1_lines[65]['amount'] + it1_lines[66]['amount']
             it1_lines[68]['amount'] = it1_lines[38]['amount'] + it1_lines[67]['amount']
 
             self.env['dgii.reports.it1.line'].create(attachment_a_lines.values())
             self.env['dgii.reports.it1.line'].create(it1_lines.values())
     
     def _generate_report(self):
-
         self._compute_606_data()
         self._compute_607_data()
         self._compute_608_data()
@@ -1749,19 +1688,16 @@ class DgiiReport(models.Model):
         ])
 
         if reports_without_sent:
-            raise ValidationError(
-                _('There are reports that have not been sent yet. Please send them before generating a new one.'))
+            raise ValidationError(_('There are reports that have not been sent yet. Please send them before generating a new one.'))
 
         if self.state == 'generated':
-            action = self.env.ref(
-                'dgii_reports.dgii_report_regenerate_wizard_action').read()[0]
+            action = self.env.ref('dgii_reports.dgii_report_regenerate_wizard_action').read()[0]
             action['context'] = {'default_report_id': self.id}
             return action
         else:
             self._generate_report()
 
     def _has_withholding(self, inv):
-
         """Validate if given invoice has an Withholding tax"""
 
         return True if any([
@@ -1776,21 +1712,12 @@ class DgiiReport(models.Model):
             SaleLine = self.env['dgii.reports.sale.line']
             CancelLine = self.env['dgii.reports.cancel.line']
             ExteriorLine = self.env['dgii.reports.exterior.line']
-            invoice_ids = PurchaseLine.search([
-                ('dgii_report_id', '=', report.id)
-            ]).mapped('invoice_id')
-            invoice_ids += SaleLine.search([
-                ('dgii_report_id', '=', report.id)
-            ]).mapped('invoice_id')
-            invoice_ids += CancelLine.search([
-                ('dgii_report_id', '=', report.id)
-            ]).mapped('invoice_id')
-            invoice_ids += ExteriorLine.search([
-                ('dgii_report_id', '=', report.id)
-            ]).mapped('invoice_id')
+            invoice_ids = PurchaseLine.search([('dgii_report_id', '=', report.id)]).mapped('invoice_id')
+            invoice_ids += SaleLine.search([('dgii_report_id', '=', report.id)]).mapped('invoice_id')
+            invoice_ids += CancelLine.search([('dgii_report_id', '=', report.id)]).mapped('invoice_id')
+            invoice_ids += ExteriorLine.search([('dgii_report_id', '=', report.id)]).mapped('invoice_id')
             for inv in invoice_ids:
-                if (inv.payment_state in ['paid', 'in_payment'] or inv.state == 'cancel') and \
-                        self._include_in_current_report(inv):
+                if (inv.payment_state in ['paid', 'in_payment'] or inv.state == 'cancel') and self._include_in_current_report(inv):
                     inv.fiscal_status = 'done'
                     continue
 
@@ -1811,8 +1738,7 @@ class DgiiReport(models.Model):
             'view_mode': 'tree',
             'res_model': 'dgii.reports.purchase.line',
             'type': 'ir.actions.act_window',
-            'view_id':
-                self.env.ref('dgii_reports.dgii_report_purchase_line_tree').id,
+            'view_id': self.env.ref('dgii_reports.dgii_report_purchase_line_tree').id,
             'domain': [('dgii_report_id', '=', self.id)]
         }
 
@@ -1822,8 +1748,7 @@ class DgiiReport(models.Model):
             'view_mode': 'tree',
             'res_model': 'dgii.reports.sale.line',
             'type': 'ir.actions.act_window',
-            'view_id':
-                self.env.ref('dgii_reports.dgii_report_sale_line_tree').id,
+            'view_id': self.env.ref('dgii_reports.dgii_report_sale_line_tree').id,
             'domain': [('dgii_report_id', '=', self.id)]
         }
 
@@ -1833,8 +1758,7 @@ class DgiiReport(models.Model):
             'view_mode': 'tree',
             'res_model': 'dgii.reports.cancel.line',
             'type': 'ir.actions.act_window',
-            'view_id':
-                self.env.ref('dgii_reports.dgii_cancel_report_line_tree').id,
+            'view_id': self.env.ref('dgii_reports.dgii_cancel_report_line_tree').id,
             'domain': [('dgii_report_id', '=', self.id)]
         }
 
@@ -1844,8 +1768,7 @@ class DgiiReport(models.Model):
             'view_mode': 'tree',
             'res_model': 'dgii.reports.exterior.line',
             'type': 'ir.actions.act_window',
-            'view_id':
-                self.env.ref('dgii_reports.dgii_exterior_report_line_tree').id,
+            'view_id': self.env.ref('dgii_reports.dgii_exterior_report_line_tree').id,
             'domain': [('dgii_report_id', '=', self.id)]
         }
 
@@ -2010,18 +1933,22 @@ class DgiiReportsIt1(models.Model):
     name = fields.Char(
         string='Name',
     )
+
     sequence = fields.Integer(
         string='Sequence',
     )
+
     dgii_report_id = fields.Many2one(
         comodel_name='dgii.reports',
         ondelete='cascade',
     )
+
     currency_id = fields.Many2one(
         comodel_name='res.currency',
         string='Currency',
         related='dgii_report_id.currency_id'
     )
+
     section = fields.Selection(
         string='section',
         selection=[
@@ -2031,30 +1958,36 @@ class DgiiReportsIt1(models.Model):
             ('3', 'Section 3'),
             ('4', 'Section 4'),
             ('5', 'Section 5'),
-
             # IT-1
             ('6', 'Section 6'),
         ],
         required=False,
     )
+
     coefficient = fields.Float(
         string='%',
     )
+
     quantity = fields.Integer(
         string='QUANTITY'
     )
+
     local_purchase = fields.Monetary(
         string="LOCAL PURCHASE",
     )
+
     services = fields.Monetary(
         string="SERVICES",
     )
+
     imports = fields.Monetary(
         string="IMPORTS",
     )
+
     amount = fields.Monetary(
         string="AMOUNT",
     )
+
     display_type = fields.Selection(
         string="Display type",
         selection=[

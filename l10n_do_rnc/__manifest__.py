@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 {
-    'name': 'Search RNC name',
-    'summary': """
-        This module searches for the company name by entering a Taxpayer Registration Number (RNC), if the company is valid.
-    """,
-
-    'description': """
-        This module searches for the company name by entering a Taxpayer Registration Number (RNC), if the company is valid.
-    """,
-    'author': "Guavana",
+    'name': 'Search RNC name (Dominican Republic)',
+    'summary':
+        """
+            This module searches for the company name by entering a Taxpayer Registration Number (RNC), if the company is valid.
+        """,
+    'description':
+        """
+            This module searches for the company name by entering a Taxpayer Registration Number (RNC), if the company is valid.
+        """,
+    'author': "Guavana, UnlimitSoft SRL",
     'website': "https://www.guavana.com",
     'license': 'LGPL-3',
     'category': 'Localization',
-    'version': '16.0.1.0.9',
+    'version': '17.0.1.0.3',
     'depends': [
         'base',
         'contacts',
@@ -29,4 +30,6 @@
         'views/res_partner_views.xml',
     ],
     'installable': True,
+    'auto_install': False,
+    'application': False,
 }

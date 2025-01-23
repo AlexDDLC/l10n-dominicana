@@ -1,21 +1,23 @@
 {
-    "name": "Fiscal Accounting (Rep. Dominicana)",
-    "summary": """
-        Este módulo implementa la administración y gestión de los números de
-        comprobantes fiscales para el cumplimento de la norma 06-18 de la
-        Dirección de Impuestos Internos en la República Dominicana.
-    """,
-    "author": "Marcos, Guavana, Indexa, Iterativo SRL, Neotec",
+    "name": "Fiscal Accounting (Dominican Republic)",
+    "summary":
+        """
+            Este módulo implementa la administración y gestión de los números de
+            comprobantes fiscales para el cumplimento de la norma 06-18 de la
+            Dirección de Impuestos Internos en la República Dominicana.
+        """,
+    "author": "Marcos, Guavana, Indexa, Iterativo SRL, Neotec, UnlimitSoft SRL",
     "license": "LGPL-3",
     "website": "https://github.com/odoo-dominicana",
     "category": "Localization",
-    "version": "16.0.2.1.2",
+    'version': '17.0.1.0.3',
     # any module necessary for this one to work correctly
     "depends": [
         "base",
         "web",
         "account",
         "l10n_do",
+        "account_debit_note"
     ],
     # any python dependencies for this one to work correctly
     'external_dependencies': {
@@ -36,6 +38,7 @@
 
         "wizard/account_fiscal_sequence_validate_wizard_views.xml",
         "wizard/account_invoice_refund_views.xml",
+        # "wizard/account_invoice_debit_views.xml",
 
         # "views/account_report.xml",
         "views/account_invoice_views.xml",
@@ -55,4 +58,7 @@
         "demo/res_partner_demo.xml",
         "demo/account_fiscal_sequence_demo.xml",
     ],
+    'installable': True,
+    'auto_install': False,
+    'application': False,
 }

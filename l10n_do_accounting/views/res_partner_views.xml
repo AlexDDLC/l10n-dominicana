@@ -5,21 +5,8 @@
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='vat']" position="attributes">
-                <attribute name="attrs">{'invisible': [('country_id', '=', %(base.do)s)]}</attribute>
-            </xpath>
             <xpath expr="//field[@name='vat']" position="after">
                 <field name="is_fiscal_info_required" invisible="1"/>
-                <field name="vat" placeholder="ej. NNNNNNNNN" string="RNC" attrs="{
-                    'readonly': [('parent_id','!=',False)],
-                    'invisible': ['|', ('country_id', '!=', %(base.do)s), ('is_company', '=', False)],
-                    'required': [('is_fiscal_info_required','=',True)]
-                }"/>
-                <field name="vat" placeholder="ej. NNNNNNNNNNN" string="Cédula" attrs="{
-                    'readonly': [('parent_id','!=',False)],
-                    'invisible': ['|', ('country_id', '!=', %(base.do)s), ('is_company', '=', True)],
-                    'required': [('is_fiscal_info_required','=',True)]
-                }"/>
             </xpath>
             <group name="sale" position ="inside">
                 <field name="sale_fiscal_type_id"/>
@@ -30,8 +17,7 @@
             </group>
         </field>
     </record>
-
-
+    
     <!-- Inherit Form View to Modify it -->
     <record id="view_res_partner_filter" model="ir.ui.view">
         <field name="name">ncf.res.partner.select</field>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_account_debit_note_inherited" model="ir.ui.view">
+        <field name="name">view.account.debit.note.inherited</field>
+        <field name="model">account.debit.note</field>
+        <field name="inherit_id" ref="account_debit_note.view_account_debit_note" />
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='move_ids']" position="before">
+                <field name="is_fiscal_debit" invisible="1" />
+            </xpath>
+
+            <xpath expr="//field[@name='reason']" position="after">
+                <field name="is_vendor_debit" invisible="1" />
+                <field name="debit_ref" invisible="not is_vendor_debit" required="is_fiscal_debit and is_vendor_debit" />
+                <field name="ncf_expiration_date" invisible="not is_vendor_debit" />
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

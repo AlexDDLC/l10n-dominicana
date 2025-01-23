@@ -44,7 +44,7 @@ class AccountInvoice(models.Model):
 
             inv.payment_date = payment_date
 
-    @api.constrains('line_ids',  'line_ids.tax_line_id')
+    @api.constrains('line_ids')
     def _check_isr_tax(self):
         """Restrict one ISR tax per invoice"""
         for inv in self:
@@ -97,13 +97,16 @@ class AccountInvoice(models.Model):
                 inv.invoiced_itbis = abs(sum(tax_line_ids.filtered(
                     lambda tax: tax.tax_line_id.l10n_do_tax_type == 'itbis').mapped('balance')
                 ))
+
                 inv.selective_tax = abs(sum(tax_line_ids.filtered(
                     lambda tax: tax.tax_line_id.l10n_do_tax_type == 'isc').mapped('balance')
                 ))
+
                 inv.other_taxes = abs(sum(
                     tax_line_ids.filtered(
                         lambda tax: tax.tax_line_id.l10n_do_tax_type == 'other').mapped('balance')
                 ))
+
                 inv.legal_tip = abs(sum(
                     tax_line_ids.filtered(
                         lambda tax: tax.tax_line_id.l10n_do_tax_type == 'tip').mapped('balance')
@@ -255,9 +258,15 @@ class AccountInvoice(models.Model):
     def _compute_in_invoice_payment_form(self):
         for inv in self:
             if inv.payment_state in ('paid', 'in_payment'):
-                payment_dict = {'cash': '01', 'bank': '02', 'card': '03',
-                                'credit': '04', 'swap': '05',
-                                'credit_note': '06', 'mixed': '07'}
+                payment_dict = {
+                    'cash': '01',
+                    'bank': '02',
+                    'card': '03',
+                    'credit': '04',
+                    'swap': '05',
+                    'credit_note': '06',
+                    'mixed': '07'
+                }
                 inv.payment_form = payment_dict.get(inv._get_payment_string())
             else:
                 inv.payment_form = '04'
@@ -276,8 +285,8 @@ class AccountInvoice(models.Model):
                 'service_type_detail': [
                     ('parent_code', '=', self.service_type)
                     ]
+                }
             }
-        }
 
     @api.onchange('journal_id')
     def ext_onchange_journal_id(self):
@@ -292,66 +301,79 @@ class AccountInvoice(models.Model):
         compute='_compute_amount_fields',
         currency_field='company_currency_id'
     )
+
     good_total_amount = fields.Monetary(
         string="Good Total Amount",
         compute='_compute_amount_fields',
         currency_field='company_currency_id',
     )
+
     invoiced_itbis = fields.Monetary(
         string="Invoiced ITBIS",
         compute='_compute_taxes_fields',
         currency_field='company_currency_id'
     )
+
     proportionality_tax = fields.Monetary(
         string="Proportionality Tax",
         compute='_compute_taxes_fields',
         currency_field='company_currency_id'
     )
+
     cost_itbis = fields.Monetary(
         string="Cost Itbis",
         compute='_compute_taxes_fields',
         currency_field='company_currency_id'
     )
+
     advance_itbis = fields.Monetary(
         string="Advanced ITBIS",
         compute='_compute_taxes_fields',
         currency_field='company_currency_id',
     )
+
     isr_withholding_type = fields.Char(
         string="ISR Withholding Type",
         compute='_compute_isr_withholding_type',
         size=2
     )
+
     selective_tax = fields.Monetary(
         string="Selective Tax",
         compute='_compute_taxes_fields',
         currency_field='company_currency_id'
     )
+
     other_taxes = fields.Monetary(
         string="Other taxes",
         compute='_compute_taxes_fields',
         currency_field='company_currency_id'
     )
+
     legal_tip = fields.Monetary(
         string="Legal tip amount",
         compute='_compute_taxes_fields',
         currency_field='company_currency_id'
     ) 
+
     withholding_itbis = fields.Monetary(
         string="Withholding ITBIS",
         compute='_compute_withholding_taxes',
         currency_field='company_currency_id',
     )
+
     income_withholding = fields.Monetary(
         string="Income Withholding",
         compute='_compute_withholding_taxes',
         currency_field='company_currency_id'
     )
+
     payment_date = fields.Date(
         string="Payment date",
         compute='_compute_invoice_payment_date', 
         store=True,
     )
+
     payment_form = fields.Selection(
         string="Payment form",
         selection=[
@@ -365,9 +387,11 @@ class AccountInvoice(models.Model):
         ],
         compute='_compute_in_invoice_payment_form',
     )
+
     is_exterior = fields.Boolean(
         compute='_compute_is_exterior', 
     )
+
     service_type = fields.Selection(
         string='Service type',
         selection=[
@@ -381,10 +405,12 @@ class AccountInvoice(models.Model):
             ('08', 'Royalties and Other Intangibles Expenses')
         ]
     )
+
     service_type_detail = fields.Many2one(
         string='Service type detail',
         comodel_name='invoice.service.type.detail',
     )
+
     fiscal_status = fields.Selection(
         selection=[
             ('normal', 'Partial'), 
