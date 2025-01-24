@@ -86,6 +86,9 @@
                 <attribute name="string">NCF</attribute>
                 <attribute name="optional">show</attribute>
             </xpath>
+            <xpath expr="//field[@name='amount_residual_signed']" position="attributes">
+                <attribute name="optional">show</attribute>
+            </xpath>
         </field>
     </record>
 

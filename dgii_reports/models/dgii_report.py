@@ -876,7 +876,7 @@ class DgiiReport(models.Model):
         company_vat = self.company_id.vat
         period = dt.strptime(self.name.replace('/', ''), '%m%Y').strftime('%Y%m')
 
-        header = "608|{}|{}|{}".format(company_vat.ljust(11), period, qty)
+        header = "608|{}|{}|{}".format(company_vat, period, qty)
         data = header + '\n' + records
 
         file_directory = '/tmp'
@@ -952,7 +952,7 @@ class DgiiReport(models.Model):
         company_vat = self.company_id.vat
         period = dt.strptime(self.name.replace('/', ''), '%m%Y').strftime('%Y%m')
 
-        header = "609|{}|{}|{}".format(company_vat.ljust(11), period, qty)
+        header = "609|{}|{}|{}".format(company_vat, period, qty)
         data = header + '\n' + records
 
         file_directory = '/tmp'
