@@ -340,7 +340,6 @@ class AccountFiscalSequence(models.Model):
         return fiscal_sequence_id
 
     def get_fiscal_number(self):
-
         if not self.fiscal_type_id.assigned_sequence:
             return False
 
@@ -456,7 +455,6 @@ class AccountFiscalType(models.Model):
             )
 
     def check_format_fiscal_number(self, fiscal_number, type=''):
-
         if not fiscal_number:
             raise ValidationError(_('Fiscal number can not be blank'))
         

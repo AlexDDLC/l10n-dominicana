@@ -38,7 +38,7 @@
 
         "wizard/account_fiscal_sequence_validate_wizard_views.xml",
         "wizard/account_invoice_refund_views.xml",
-        # "wizard/account_invoice_debit_views.xml",
+        "wizard/account_invoice_debit_views.xml",
 
         # "views/account_report.xml",
         "views/account_invoice_views.xml",

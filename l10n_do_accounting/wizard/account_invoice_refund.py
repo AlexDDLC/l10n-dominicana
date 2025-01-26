@@ -15,6 +15,7 @@ except (ImportError, IOError) as err:
 class AccountMoveReversal(models.TransientModel):
     _inherit = "account.move.reversal"
 
+
     @api.model
     def default_get(self, fields):
         res = super(AccountMoveReversal, self).default_get(fields)
@@ -64,6 +65,7 @@ class AccountMoveReversal(models.TransientModel):
         string='Fiscal refund'
     )
 
+
     def compute_refund(self, mode="refund"):
         xml_id = False
         created_inv = []
@@ -88,9 +90,6 @@ class AccountMoveReversal(models.TransientModel):
                         )
                     )
 
-                date = wizard.date or False
-                description = wizard.description or inv.name
-                refund_ref = wizard.refund_ref
                 action_map = {
                     "out_invoice": "action_invoice_out_refund",
                     "out_refund": "action_invoice_tree1",
@@ -106,90 +105,16 @@ class AccountMoveReversal(models.TransientModel):
             return result
         return True
 
-    # TODO: Save for debit note
-    # def invoice_debit_note(self):
-    #     xml_id = False
-    #     created_inv = []
-    #     for wizard in self:
-    #         inv_obj = self.env["account.move"]
-    #         context = dict(self._context or {})
-    #         for inv in inv_obj.browse(context.get("active_ids")):
-    #             if inv.state in ["draft", "cancel"]:
-    #                 raise UserError(
-    #                     _(
-    #                         "Cannot create debit note for the draft/cancelled "
-    #                         "invoice."
-    #                     )
-    #                 )
-
-    #             debit_map = {"out_debit": "out_invoice", "in_debit": "in_invoice"}
-
-    #             date = wizard.date or wizard.invoice_date
-    #             description = wizard.description or inv.name
-    #             vendor_ref = wizard.refund_ref
-    #             fiscal_type = self.env["account.fiscal.type"].search(
-    #                 [("type", "=", context.get("debit_note"))], limit=1
-    #             )
-
-    #             values = {
-    #                 "partner_id": inv.partner_id.id,
-    #                 "ref": vendor_ref,
-    #                 "invoice_date": date,
-    #                 "income_type": inv.income_type,
-    #                 "expense_type": inv.expense_type,
-    #                 "is_debit_note": True,
-    #                 "origin_out": inv.ref,
-    #                 "type": debit_map[context.get("debit_note")],
-    #                 "fiscal_type_id": fiscal_type.id,
-    #                 "invoice_line_ids": [
-    #                     (
-    #                         0,
-    #                         0,
-    #                         {
-    #                             "name": description,
-    #                             "account_id": wizard.account_id.id,
-    #                             "price_unit": amount,
-    #                         },
-    #                     )
-    #                 ],
-    #                 "journal_id": inv.journal_id.id,
-    #             }
-    #             debit_note = inv_obj.create(values)
-    #             created_inv.append(debit_note.id)
-    #             invoice_type = {
-    #                 "out_invoice": _("customer debit note"),
-    #                 "in_invoice": _("vendor debit note"),
-    #             }
-    #             message = _(
-    #                 "This %s has been created from: <a href=# data-oe-"
-    #                 "model=account.move data-oe-id=%d>%s</a>"
-    #             ) % (invoice_type[inv.move_type], inv.id, inv.number)
-    #             debit_note.message_post(body=message)
-    #             if wizard.refund_method == "apply_refund":
-    #                 debit_note.action_invoice_open()
-
-    #             action_map = {
-    #                 "out_invoice": "action_invoice_out_debit_note",
-    #                 "in_invoice": "action_vendor_in_debit_note",
-    #             }
-    #             xml_id = action_map[inv.move_type]
-    #     if xml_id:
-    #         result = self.env.ref("l10n_do_accounting.%s" % xml_id).read()[0]
-    #         invoice_domain = safe_eval(result["domain"])
-    #         invoice_domain.append(("id", "in", created_inv))
-    #         result["domain"] = invoice_domain
-    #         return result
-    #     return True
 
     def reverse_moves(self, is_modify=False):
         self.ensure_one()
-
         if self.refund_ref and self.is_fiscal_refund:
             self.env['account.fiscal.type'].check_format_fiscal_number(
                 self.refund_ref,
                 'in_refund'
             )
         return super(AccountMoveReversal, self).reverse_moves(is_modify=is_modify)
+
 
     def _prepare_default_reversal(self, move):
         res = super(AccountMoveReversal, self)._prepare_default_reversal(move)
