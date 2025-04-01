@@ -15,7 +15,7 @@
     'author': "Indexa, SRL, Iterativo SRL, UnlimitSoft SRL",
     'license': 'LGPL-3',
     'category': 'Accounting',
-    'version': '17.0.1.0.3',
+    'version': '18.0.1.0.3',
     # any module necessary for this one to work correctly
     'depends': [
         'web',
