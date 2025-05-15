@@ -9,7 +9,7 @@
 
             <xpath expr="//field[@name='type']" position="after">
                 <field name="l10n_do_fiscal_journal" widget="boolean_toggle" invisible="type in ('cash','bank','general')" />
-
+                
                 <field name="payment_form" invisible="type in ('sale','purchase','general')" />
             </xpath>
 
@@ -27,6 +27,6 @@
             </xpath>
 
         </field>
-    </record>
+    </record> 
 
 </odoo>

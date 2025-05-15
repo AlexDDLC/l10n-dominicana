@@ -164,13 +164,11 @@ class AccountInvoice(models.Model):
         """
         for inv in self.filtered(lambda i: i.state == "draft"):
             if inv.is_debit_note:
-                
                 debit_map = {"in_invoice": "in_debit", "out_invoice": "out_debit"}
                 fiscal_type = self.env["account.fiscal.type"].search(
                     [("type", "=", debit_map[inv.move_type])], limit=1
                 )
                 inv.fiscal_type_id = fiscal_type.id
-
             else:
                 fiscal_type = inv.fiscal_type_id
 
@@ -489,7 +487,6 @@ class AccountInvoice(models.Model):
 
 
     def action_invoice_cancel(self):
-
         # if self.journal_id.l10n_do_fiscal_journal:
         fiscal_invoice = self.filtered(lambda inv: inv.journal_id.l10n_do_fiscal_journal)
         if len(fiscal_invoice) > 1:
