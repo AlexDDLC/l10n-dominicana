@@ -120,7 +120,7 @@
                         </page>
                         <page name="it1a" string="Attachment A (IT-1)">
                             <field name="it1_section_1_line_ids" nolabel="1"  readonly="1" widget="section_and_note_one2many">
-                                <tree create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in [11]">
+                                <list create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in [11]">
                                     <field name="sequence" string="Box"/>
                                     <field name="name"/>
                                     <field name="quantity"/>
@@ -128,7 +128,7 @@
                                     <field name="currency_id" invisible="1"/>
                                     <field name="dgii_report_id" invisible="1"/>
                                     <field name="display_type" invisible="1"/>
-                                </tree>
+                                </list>
                                 <form>
                                     <group>
                                         <field name="sequence" string="Box" invisible="display_type"/>
@@ -141,14 +141,14 @@
                                 </form>
                             </field>
                             <field name="it1_section_2_line_ids" nolabel="1"  readonly="1" widget="section_and_note_one2many">
-                                <tree create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in (19, 26, 33)">
+                                <list create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in (19, 26, 33)">
                                     <field name="sequence" string="Box"/>
                                     <field name="name"/>
                                     <field name="amount"/>
                                     <field name="currency_id" invisible="1"/>
                                     <field name="dgii_report_id" invisible="1"/>
                                     <field name="display_type" invisible="1"/>
-                                </tree>
+                                </list>
                                 <form>
                                     <group>
                                         <field name="sequence" string="Box" invisible="display_type"/>
@@ -161,7 +161,7 @@
                                 </form>
                             </field>
                             <field name="it1_section_3_line_ids" nolabel="1"  readonly="1" widget="section_and_note_one2many">
-                                <tree create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in (37, 38, 41, 42)">
+                                <list create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in (37, 38, 41, 42)">
                                     <field name="sequence" string="Box"/>
                                     <field name="name"/>
                                     <field name="local_purchase" string="TOTAL INVOICED" invisible="sequence in ()"/>
@@ -169,7 +169,7 @@
                                     <field name="currency_id" invisible="1"/>
                                     <field name="dgii_report_id" invisible="1"/>
                                     <field name="display_type" invisible="1"/>
-                                </tree>
+                                </list>
                                 <form>
                                     <group>
                                         <field name="sequence" string="Box" invisible="display_type"/>
@@ -183,7 +183,7 @@
                                 </form>
                             </field>
                             <field name="it1_section_4_line_ids" nolabel="1"  readonly="1" widget="section_and_note_one2many">
-                                <tree create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0">
+                                <list create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0">
                                     <field name="sequence" string="Box"/>
                                     <field name="name"/>
                                     <field name="quantity"/>
@@ -191,7 +191,7 @@
                                     <field name="currency_id" invisible="1"/>
                                     <field name="dgii_report_id" invisible="1"/>
                                     <field name="display_type" invisible="1"/>
-                                </tree>
+                                </list>
                                 <form>
                                     <group>
                                         <field name="sequence" string="Box" invisible="display_type"/>
@@ -204,7 +204,7 @@
                                 </form>
                             </field>
                             <field name="it1_section_5_line_ids"  nolabel="1" widget="section_and_note_one2many" readonly="1">
-                                <tree create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in (48, 52, 54, 55, 56)">
+                                <list create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in (48, 52, 54, 55, 56)">
                                     <field name="sequence" string="Box"/>
                                     <field name="name" style="max-width: 480px !important;"/>
                                     <field name="local_purchase" invisible="sequence == 54"/>
@@ -215,7 +215,7 @@
                                     <field name="currency_id" invisible="1"/>
                                     <field name="dgii_report_id" invisible="1"/>
                                     <field name="display_type" invisible="1"/>
-                                </tree>
+                                </list>
                                 <form>
                                     <group>
                                         <field name="sequence" string="Box" invisible="display_type"/>
@@ -234,14 +234,14 @@
                         </page>
                         <page name="it1" string="IT-1">
                             <field name="it1_section_6_line_ids" nolabel="1" readonly="1" widget="section_and_note_one2many">
-                                <tree create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in (9, 10, 21, 25, 26, 27, 28, 33, 34, 38, 41, 46, 49, 55, 58, 59, 60, 62, 63, 67, 68)" limit="80">
+                                <list create="false" edit="false" decoration-success="amount &gt; 0" decoration-danger="amount &lt; 0" decoration-bf="sequence in (9, 10, 21, 25, 26, 27, 28, 33, 34, 38, 41, 46, 49, 55, 58, 59, 60, 62, 63, 67, 68)" limit="80">
                                     <field name="sequence" string="Box"/>
                                     <field name="name"/>
                                     <field name="amount"/>
                                     <field name="currency_id" invisible="1"/>
                                     <field name="dgii_report_id" invisible="1"/>
                                     <field name="display_type" invisible="1"/>
-                                </tree>
+                                </list>
                                 <form>
                                     <group>
                                         <field name="sequence" string="Box" invisible="display_type"/>
@@ -276,12 +276,8 @@
                             </group>
                         </page>
                     </notebook>
-
                 </sheet>
-                <div class="oe_chatter">
-                    <field name="message_follower_ids" widget="mail_followers" groups="base.group_user"/>
-                    <field name="message_ids" widget="mail_thread"/>
-                </div>
+                <chatter/>
             </form>
         </field>
     </record>
@@ -290,14 +286,14 @@
         <field name="name">dgii.reports.tree.view</field>
         <field name="model">dgii.reports</field>
         <field name="arch" type="xml">
-            <tree string="Statements">
+            <list string="Statements">
                 <field name="name"/>
                 <field name="state"/>
                 <field name="create_date"/>
                 <field name="create_uid"/>
                 <field name="write_date"/>
                 <field name="write_uid"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -315,7 +311,7 @@
         <field name="name">Reports</field>
         <field name="res_model">dgii.reports</field>
 
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="dgii_report_search_view"/>
         <field name="help" type="html">
             <p class="oe_view_nocontent_create"></p>
@@ -332,7 +328,7 @@
         <field name="name">dgii.reports.purchase.line.tree</field>
         <field name="model">dgii.reports.purchase.line</field>
         <field name="arch" type="xml">
-            <tree create="false" edit="false">
+            <list create="false" edit="false">
                 <button name="action_view_invoice" type="object" string="Invoice" icon="fa-eye"/>
                 <field name="dgii_report_id" invisible="1"/>
                 <field name="line"/>
@@ -360,7 +356,7 @@
                 <field name="other_taxes" sum="Total"/>
                 <field name="legal_tip" sum="Total"/>
                 <field name="payment_type"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -369,7 +365,7 @@
         <field name="name">dgii.reports.sale.line.tree</field>
         <field name="model">dgii.reports.sale.line</field>
         <field name="arch" type="xml">
-            <tree create="false" edit="false" decoration-muted="(invoiced_amount &lt; 250000) and (identification_type == '2')">
+            <list create="false" edit="false" decoration-muted="(invoiced_amount &lt; 250000) and (identification_type == '2')">
                 <button name="action_view_invoice" type="object" string="Invoice" icon="fa-eye"/>
                 <field name="dgii_report_id" invisible="1"/>
                 <field name="line"/>
@@ -397,7 +393,7 @@
                 <field name="bond" sum="Total"/>
                 <field name="swap" sum="Total"/>
                 <field name="others" sum="Total"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -406,7 +402,7 @@
         <field name="name">dgii.reports.cancel.line.tree</field>
         <field name="model">dgii.reports.cancel.line</field>
         <field name="arch" type="xml">
-            <tree create="false" edit="false">
+            <list create="false" edit="false">
                 <button name="action_view_invoice" type="object" string="Invoice" icon="fa-eye"/>
                 <field name="dgii_report_id" invisible="1"/>
                 <field name="line"/>
@@ -414,7 +410,7 @@
                 <field name="fiscal_invoice_number" widget="dgii_reports_url"/>
                 <field name="invoice_date"/>
                 <field name="annulation_type"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -423,7 +419,7 @@
         <field name="name">dgii.exterior.cancel.line.tree</field>
         <field name="model">dgii.reports.exterior.line</field>
         <field name="arch" type="xml">
-            <tree create="false" edit="false">
+            <list create="false" edit="false">
                 <button name="action_view_invoice" type="object" string="Invoice" icon="fa-eye"/>
                 <field name="dgii_report_id" invisible="1"/>
                 <field name="line"/>
@@ -440,7 +436,7 @@
                 <field name="isr_withholding_date" sum="Total"/>
                 <field name="presumed_income" sum="Total"/>
                 <field name="withholded_isr" sum="Total"/>
-            </tree>
+            </list>
         </field>
     </record>
 

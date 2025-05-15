@@ -15,8 +15,10 @@ class InvoiceServiceTypeDetail(models.Model):
     code = fields.Char(size=2)
     parent_code = fields.Char()
 
+    # Add translation languaje to this message
     _sql_constraints = [
-        ('code_unique', 'unique(code)', _('Code must be unique')),
+        ('code_unique', 'unique(code)', 
+        _('Code must be unique')),
     ]
 
 

@@ -128,6 +128,7 @@ class DgiiReport(models.Model):
             except UserError as e:
                 raise e
 
+    # Add translation languaje to this message
     _sql_constraints = [
         ('name_unique', 'UNIQUE(name, company_id)', 
         _("You cannot have more than one report by period."))
@@ -1735,7 +1736,7 @@ class DgiiReport(models.Model):
     def get_606_tree_view(self):
         return {
             'name': '606',
-            'view_mode': 'tree',
+            'view_mode': 'list',
             'res_model': 'dgii.reports.purchase.line',
             'type': 'ir.actions.act_window',
             'view_id': self.env.ref('dgii_reports.dgii_report_purchase_line_tree').id,
@@ -1745,7 +1746,7 @@ class DgiiReport(models.Model):
     def get_607_tree_view(self):
         return {
             'name': '607',
-            'view_mode': 'tree',
+            'view_mode': 'list',
             'res_model': 'dgii.reports.sale.line',
             'type': 'ir.actions.act_window',
             'view_id': self.env.ref('dgii_reports.dgii_report_sale_line_tree').id,
@@ -1755,7 +1756,7 @@ class DgiiReport(models.Model):
     def get_608_tree_view(self):
         return {
             'name': '608',
-            'view_mode': 'tree',
+            'view_mode': 'list',
             'res_model': 'dgii.reports.cancel.line',
             'type': 'ir.actions.act_window',
             'view_id': self.env.ref('dgii_reports.dgii_cancel_report_line_tree').id,
@@ -1765,7 +1766,7 @@ class DgiiReport(models.Model):
     def get_609_tree_view(self):
         return {
             'name': '609',
-            'view_mode': 'tree',
+            'view_mode': 'list',
             'res_model': 'dgii.reports.exterior.line',
             'type': 'ir.actions.act_window',
             'view_id': self.env.ref('dgii_reports.dgii_exterior_report_line_tree').id,
