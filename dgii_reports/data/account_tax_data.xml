@@ -4,9 +4,11 @@
     <record id="account.1_tax_18_sale" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
     </record>
+    <!-- 
     <record id="account.1_tax_18_sale_incl" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
-    </record>
+    </record> 
+    -->
     <record id="account.1_tax_18_of_10" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
     </record>
@@ -25,33 +27,43 @@
     <record id="account.1_tax_18_purch" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
     </record>
+    <!-- 
     <record id="account.1_tax_18_purch_incl" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
-    </record>
+    </record> 
+    -->
     <record id="account.1_tax_16_purch" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
     </record>
+    <!-- 
     <record id="account.1_tax_16_purch_incl" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
-    </record>
+    </record> 
+    -->
     <record id="account.1_tax_9_purch" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
     </record>
+    <!-- 
     <record id="account.1_tax_9_purch_incl" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
-    </record>
+    </record> 
+    -->
     <record id="account.1_tax_8_purch" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
     </record>
+    <!-- 
     <record id="account.1_tax_8_purch_incl" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
-    </record>
+    </record> 
+    -->
     <record id="account.1_tax_18_purch_serv" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
     </record>
+    <!-- 
     <record id="account.1_tax_18_purch_serv_incl" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
-    </record>
+    </record> 
+    -->
     <record id="account.1_tax_18_10_total_mount" model="account.tax">
         <field name="l10n_do_tax_type">itbis</field>
     </record>
