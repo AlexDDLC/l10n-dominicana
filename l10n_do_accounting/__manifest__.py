@@ -10,7 +10,7 @@
     "license": "LGPL-3",
     "website": "https://github.com/odoo-dominicana",
     "category": "Localization",
-    'version': '18.0.0.0.1',
+    'version': '18.0.1.0.3',
     # any module necessary for this one to work correctly
     "depends": [
         "base",
@@ -49,7 +49,7 @@
         'views/account_invoice_cancel_views.xml',
         # "views/backend_js.xml",
 
-        "views/report_templates.xml",
+        #"views/report_templates.xml",
         "views/report_invoice.xml",
         #"views/layouts.xml",
     ],
