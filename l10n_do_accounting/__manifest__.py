@@ -10,7 +10,7 @@
     "license": "LGPL-3",
     "website": "https://github.com/odoo-dominicana",
     "category": "Localization",
-    'version': '18.0.1.0.3',
+    'version': '18.0.0.0.1',
     # any module necessary for this one to work correctly
     "depends": [
         "base",
@@ -51,7 +51,7 @@
 
         "views/report_templates.xml",
         "views/report_invoice.xml",
-        "views/layouts.xml",
+        #"views/layouts.xml",
     ],
     # only loaded in demonstration mode
     "demo": [

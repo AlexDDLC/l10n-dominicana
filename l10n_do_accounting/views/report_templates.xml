@@ -45,8 +45,8 @@
 
     <template id="complete_fiscal_info">
         <div class="row pt-2 mb8 first-page">
-            <div class="col-6" name="company_address">
-                <div t-if="company.is_company_details_empty">
+            <div class="col-6">
+                <!-- <div t-if="company.is_company_details_empty">
                     <strong><t t-esc="company.name"/></strong>
                     <t t-esc="company.partner_id" t-options='{"widget": "contact", "fields": ["address"], "no_marker": true}'/>
                 </div>
@@ -56,20 +56,20 @@
                 <div t-if="forced_vat">
                     <t t-esc="company.country_id.vat_label or 'Tax ID'"/>:
                     <span t-esc="forced_vat"/>
-                </div>
+                </div> -->
             </div>
             <t t-call="l10n_do_accounting.fiscal_info"/>
         </div>
     </template>
 
     <template id="external_layout_standard_inherited" inherit_id="web.external_layout_standard">
-        <xpath expr="//div[@name='company_address']" position="after">
-            <t t-if="l10n_do_fiscal_invoice">
+        <!-- <xpath expr="//div[@name='company_address']" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
                 <t t-call="l10n_do_accounting.fiscal_info"/>
             </t>
         </xpath>
         <xpath expr="//li[@t-if='not forced_vat']" position="after">
-            <t t-if="l10n_do_fiscal_invoice">
+            <t t-if="is_l10n_do_fiscal_invoice">
                 <li t-if="not forced_vat and company.vat" class="first-page">
                     <strong>
                     <t t-if="o.company_id.account_fiscal_country_id.vat_label" t-esc="o.company_id.account_fiscal_country_id.vat_label" id="company_inv_tax_id_label"/>
@@ -79,15 +79,20 @@
                     <strong>Date:</strong> <span t-field="o.invoice_date"/>
                 </li>
             </t>
+        </xpath> -->
+        <xpath expr="//div[hasclass('d-flex')][1]" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <t t-call="l10n_do_accounting.complete_fiscal_info"/>
+            </t>
         </xpath>
     </template>
 
     <template id="external_layout_boxed_inherited" inherit_id="web.external_layout_boxed">
-        <xpath expr="//div[@name='company_address']" position="attributes">
-            <attribute name="t-if">not l10n_do_fiscal_invoice</attribute>
+        <!-- <xpath expr="//div[@name='company_address']" position="attributes">
+            <attribute name="t-if">not is_l10n_do_fiscal_invoice</attribute>
         </xpath>
         <xpath expr="//div[@name='company_address']" position="after">
-            <t t-if="l10n_do_fiscal_invoice">
+            <t t-if="is_l10n_do_fiscal_invoice">
                 <div name="company_address" class="float-end mb4 not-first-page-none">
                     <ul class="list-unstyled">
                         <li t-if="company.is_company_details_empty"><t t-esc="company.partner_id" t-options='{"widget": "contact", "fields": ["address", "name"], "no_marker": true}'/></li>
@@ -99,20 +104,20 @@
                     </ul>
                 </div>        
             </t>
-        </xpath> 
+        </xpath>  -->
         <xpath expr="//div[hasclass('row') and hasclass('mb8')]" position="after">
-            <t t-if="l10n_do_fiscal_invoice">
+            <t t-if="is_l10n_do_fiscal_invoice">
                 <t t-call="l10n_do_accounting.complete_fiscal_info"/>
             </t>
         </xpath>
     </template>
 
     <template id="external_layout_bold_inherited" inherit_id="web.external_layout_bold">
-        <xpath expr="//div[@name='company_address']" position="attributes">
-            <attribute name="t-if">not l10n_do_fiscal_invoice</attribute>
+        <!-- <xpath expr="//div[@name='company_address']" position="attributes">
+            <attribute name="t-if">not is_l10n_do_fiscal_invoice</attribute>
         </xpath>
         <xpath expr="//div[@name='company_address']" position="after">
-            <div class="col-5 offset-1 not-first-page" name="company_address"  t-if="l10n_do_fiscal_invoice">
+            <div class="col-5 offset-1 not-first-page" name="company_address"  t-if="is_l10n_do_fiscal_invoice">
                 <ul class="list-unstyled">
                     <li t-if="company.is_company_details_empty"><t t-esc="company.partner_id" t-options='{"widget": "contact", "fields": ["address", "name"], "no_marker": true}'/></li>
                     <li t-else=""><t t-esc="company.company_details"/></li>
@@ -122,31 +127,35 @@
                     </li>
                 </ul>
             </div>        
-        </xpath>
-        <xpath expr="//div[hasclass('row')]" position="after">
-            <t t-if="l10n_do_fiscal_invoice">
+        </xpath> -->
+        <!-- <xpath expr="//div[hasclass('row')]" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
                 <t t-call="l10n_do_accounting.complete_fiscal_info"/>
             </t>
         </xpath>
         <xpath expr="//t[@t-call='web.address_layout']" position="replace">
-            <t t-if="l10n_do_fiscal_invoice">
+            <t t-if="is_l10n_do_fiscal_invoice">
                 <div class="pt-5">
-                    <!-- This div ensures that the address is not cropped by the header. -->
                     <t t-call="web.address_layout"/>
                 </div>            
             </t>
             <t t-else="">
                 <t t-call="web.address_layout"/>
             </t>
+        </xpath> -->
+        <xpath expr="//div[hasclass('row')][1]" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <t t-call="l10n_do_accounting.complete_fiscal_info"/>
+            </t>
         </xpath>
     </template>
 
     <template id="external_layout_striped_inherited" inherit_id="web.external_layout_striped">
-        <xpath expr="//div[@name='company_address']" position="attributes">
-            <attribute name="t-if">not l10n_do_fiscal_invoice</attribute>
+        <!-- <xpath expr="//div[@name='company_address']" position="attributes">
+            <attribute name="t-if">not is_l10n_do_fiscal_invoice</attribute>
         </xpath>
         <xpath expr="//div[@name='company_address']" position="after">
-            <div class="float-start company_address not-first-page" t-if="l10n_do_fiscal_invoice">
+            <div class="float-start company_address not-first-page" t-if="is_l10n_do_fiscal_invoice">
                 <ul class="list-unstyled">
                     <li t-if="company.is_company_details_empty"><t t-esc="company.partner_id" t-options='{"widget": "contact", "fields": ["address", "name"], "no_marker": true}'/></li>
                     <li t-else=""><t t-esc="company.company_details"/></li>
@@ -156,21 +165,97 @@
                     </li>
                 </ul>
             </div>
-        </xpath>
+        </xpath> -->
         <xpath expr="//div[hasclass('d-flex')][1]" position="after">
-            <t t-if="l10n_do_fiscal_invoice">
+            <t t-if="is_l10n_do_fiscal_invoice">
                 <t t-call="l10n_do_accounting.complete_fiscal_info"/>
             </t>
         </xpath>
-        <xpath expr="//t[@t-call='web.address_layout']" position="replace">
-            <t t-if="l10n_do_fiscal_invoice">
+        <!-- <xpath expr="//t[@t-call='web.address_layout']" position="replace">
+            <t t-if="is_l10n_do_fiscal_invoice">
                 <div class="pt-5">
-                    <!-- This div ensures that the address is not cropped by the header. -->
                     <t t-call="web.address_layout"/>
                 </div>            
             </t>
             <t t-else="">
                 <t t-call="web.address_layout"/>
+            </t>
+        </xpath> -->
+    </template>
+
+    <template id="external_layout_bubble_inherited" inherit_id="web.external_layout_bubble">
+        <!-- <xpath expr="//div[@name='company_address']" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <t t-call="l10n_do_accounting.fiscal_info"/>
+            </t>
+        </xpath>
+        <xpath expr="//li[@t-if='not forced_vat']" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <li t-if="not forced_vat and company.vat" class="first-page">
+                    <strong>
+                    <t t-if="o.company_id.account_fiscal_country_id.vat_label" t-esc="o.company_id.account_fiscal_country_id.vat_label" id="company_inv_tax_id_label"/>
+                    <t t-else="">Tax ID</t>: </strong><span t-field="o.company_id.vat"/>
+                </li>
+                <li t-if="o.invoice_date" class="first-page">
+                    <strong>Date:</strong> <span t-field="o.invoice_date"/>
+                </li>
+            </t>
+        </xpath> -->
+        <xpath expr="//div[hasclass('d-flex')][1]" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <t t-call="l10n_do_accounting.complete_fiscal_info"/>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="external_layout_wave_inherited" inherit_id="web.external_layout_wave">
+        <!-- <xpath expr="//div[@name='company_address']" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <t t-call="l10n_do_accounting.fiscal_info"/>
+            </t>
+        </xpath>
+        <xpath expr="//li[@t-if='not forced_vat']" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <li t-if="not forced_vat and company.vat" class="first-page">
+                    <strong>
+                    <t t-if="o.company_id.account_fiscal_country_id.vat_label" t-esc="o.company_id.account_fiscal_country_id.vat_label" id="company_inv_tax_id_label"/>
+                    <t t-else="">Tax ID</t>: </strong><span t-field="o.company_id.vat"/>
+                </li>
+                <li t-if="o.invoice_date" class="first-page">
+                    <strong>Date:</strong> <span t-field="o.invoice_date"/>
+                </li>
+            </t>
+        </xpath> -->
+        <xpath expr="//div[hasclass('d-flex')][1]" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <t t-call="l10n_do_accounting.complete_fiscal_info"/>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="external_layout_folder_inherited" inherit_id="web.external_layout_folder">
+        <!-- <xpath expr="//div[@name='company_address']" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <t t-call="l10n_do_accounting.fiscal_info"/>
+            </t>
+        </xpath>
+        <xpath expr="//li[@t-if='not forced_vat']" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <li t-if="not forced_vat and company.vat" class="first-page">
+                    <strong>
+                    <t t-if="o.company_id.account_fiscal_country_id.vat_label" t-esc="o.company_id.account_fiscal_country_id.vat_label" id="company_inv_tax_id_label"/>
+                    <t t-else="">Tax ID</t>: </strong><span t-field="o.company_id.vat"/>
+                </li>
+                <li t-if="o.invoice_date" class="first-page">
+                    <strong>Date:</strong> <span t-field="o.invoice_date"/>
+                </li>
+            </t>
+        </xpath> -->
+        <xpath expr="//div[hasclass('o_folder_company_info')][1]" position="after">
+            <t t-if="is_l10n_do_fiscal_invoice">
+                <br/>
+                <br/>
+                <t t-call="l10n_do_accounting.complete_fiscal_info"/>
             </t>
         </xpath>
     </template>
